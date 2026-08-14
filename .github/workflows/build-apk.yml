@@ -36,13 +36,24 @@ jobs:
           gradle assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log
           code=${PIPESTATUS[0]}
           if [ "$code" -ne 0 ]; then
-            echo "::group::Gradle failure — last 150 lines"
-            tail -n 150 build.log
+            echo "::group::Gradle failure — full log"
+            cat build.log
             echo "::endgroup::"
-            tail -n 60 build.log | while IFS= read -r line; do
+            # Compiler errors ("e: file:...") are the actionable part but can
+            # sit anywhere in a build that's otherwise thousands of lines of
+            # stack trace — surface those specifically as annotations (readable
+            # via the public checks API without needing the Azure-blob-hosted
+            # raw log) instead of just tailing the end of the file.
+            grep -E "^e: |error:|FAILURE:|What went wrong|Unresolved reference" build.log | while IFS= read -r line; do
               esc=${line//$'\r'/}
               echo "::error::${esc}"
             done
+            if ! grep -qE "^e: |error:|FAILURE:" build.log; then
+              tail -n 80 build.log | while IFS= read -r line; do
+                esc=${line//$'\r'/}
+                echo "::error::${esc}"
+              done
+            fi
           fi
           exit "$code"
 
