@@ -1,0 +1,6 @@
+<resources>
+    <style name="Theme.Intertell" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:statusBarColor">#FFFFFF</item>
+        <item name="android:windowBackground">#EDEFF2</item>
+    </style>
+</resources>
