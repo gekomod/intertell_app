@@ -3,6 +3,7 @@ package pl.intertell.technik
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job as CoroutineJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -10,7 +11,6 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
-import pl.intertell.technik.data.ApiException
 import pl.intertell.technik.data.Customer
 import pl.intertell.technik.data.CustomerSearchResult
 import pl.intertell.technik.data.Job
@@ -68,7 +68,9 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
                 _me.value = tech
                 _uiState.update { it.copy(loginLoading = false, screen = TechScreen.JOBS) }
                 refreshTasks()
-            } catch (e: ApiException) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 _uiState.update { it.copy(loginLoading = false, loginError = e.message) }
             }
         }
@@ -107,7 +109,9 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
                 // Seen live in the Jobs screen — TaskPollWorker shouldn't
                 // notify about these later just because it polls next.
                 apiRepository.serverConfig.addSeenTaskKeys(tasks.map { "${it.kind}:${it.id}" })
-            } catch (e: ApiException) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = e.message) }
             }
             _uiState.update { it.copy(jobsLoading = false) }
@@ -139,7 +143,9 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
                 _selectedJob.value = updated
                 _jobs.update { list -> list.map { if (it.id == job.id && it.kind == job.kind) updated else it } }
                 onDone()
-            } catch (e: ApiException) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = e.message) }
             }
             _uiState.update { it.copy(actionInFlight = false) }
@@ -169,7 +175,9 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
                     _selectedCustomer.value = match
                     navigate(TechScreen.CUST)
                 }
-            } catch (e: ApiException) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = e.message) }
             }
             _uiState.update { it.copy(actionInFlight = false) }
@@ -192,7 +200,9 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
             _uiState.update { it.copy(searchLoading = true) }
             try {
                 _searchResult.value = repository.searchCustomers(query)
-            } catch (e: ApiException) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = e.message) }
             }
             _uiState.update { it.copy(searchLoading = false) }
@@ -211,7 +221,9 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
             _uiState.update { it.copy(customerDetailLoading = true) }
             try {
                 _selectedCustomer.value = repository.getCustomerDetail(current.id)
-            } catch (e: ApiException) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = e.message) }
             }
             _uiState.update { it.copy(customerDetailLoading = false) }
@@ -225,7 +237,9 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
             _uiState.update { it.copy(teamLoading = true) }
             try {
                 _team.value = repository.getTechnicians()
-            } catch (e: ApiException) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = e.message) }
             }
             _uiState.update { it.copy(teamLoading = false) }
@@ -239,7 +253,9 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
                 val created = repository.addTechnician(name, email, phone, specialization, password)
                 _team.update { listOf(created) + it }
                 _uiState.update { it.copy(infoMessage = "Zaproszenie wysłane do ${created.name}.") }
-            } catch (e: ApiException) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = e.message) }
             }
             _uiState.update { it.copy(actionInFlight = false) }
@@ -253,7 +269,9 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
                 val updated = repository.updateTechnician(id, name, phone, specialization, active)
                 _team.update { list -> list.map { if (it.id == id) updated else it } }
                 _uiState.update { it.copy(infoMessage = "Zapisano zmiany.") }
-            } catch (e: ApiException) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = e.message) }
             }
             _uiState.update { it.copy(actionInFlight = false) }
@@ -266,7 +284,9 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
             try {
                 repository.deleteTechnician(id)
                 _team.update { list -> list.filterNot { it.id == id } }
-            } catch (e: ApiException) {
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
                 _uiState.update { it.copy(errorMessage = e.message) }
             }
             _uiState.update { it.copy(actionInFlight = false) }

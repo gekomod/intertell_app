@@ -3,6 +3,7 @@ package pl.intertell.technik.data.api
 import android.content.Context
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -38,39 +39,53 @@ class ApiClient(context: Context) {
     suspend fun put(path: String, body: JSONObject): JSONObject = execute("PUT", path, body)
     suspend fun delete(path: String): JSONObject = execute("DELETE", path, null)
 
+    // Every failure mode below — bad network, wrong base URL, a route that
+    // doesn't exist yet on an outdated server (plain-text 404, not JSON),
+    // an unexpected response shape — is normalized into ApiException here,
+    // once, so nothing upstream (ViewModel, screens) ever has to deal with
+    // a raw JSONException/IOException/etc. An uncaught one of those inside
+    // a viewModelScope coroutine crashes the whole app, which is exactly
+    // what used to happen logging in against a server still running the
+    // old API.
     private suspend fun execute(method: String, path: String, body: JSONObject?): JSONObject =
         withContext(Dispatchers.IO) {
-            val baseUrl = config.getBaseUrl()
-            val token = config.getToken()
-            val requestBuilder = Request.Builder().url(baseUrl + path)
-            if (!token.isNullOrBlank()) {
-                requestBuilder.header("Authorization", "Bearer $token")
-            }
-            // OkHttp requires a non-null body for methods that mandate one
-            // (POST/PUT/...) even when there's nothing to send — passing
-            // null there throws IllegalArgumentException at request-build
-            // time, not just "no body sent".
-            val requestBody = when {
-                body != null -> body.toString().toRequestBody(JSON)
-                method == "POST" || method == "PUT" -> "{}".toRequestBody(JSON)
-                else -> null
-            }
-            requestBuilder.method(method, requestBody)
+            try {
+                val baseUrl = config.getBaseUrl()
+                val token = config.getToken()
+                val requestBuilder = Request.Builder().url(baseUrl + path)
+                if (!token.isNullOrBlank()) {
+                    requestBuilder.header("Authorization", "Bearer $token")
+                }
+                // OkHttp requires a non-null body for methods that mandate
+                // one (POST/PUT/...) even when there's nothing to send —
+                // passing null there throws IllegalArgumentException at
+                // request-build time, not just "no body sent".
+                val requestBody = when {
+                    body != null -> body.toString().toRequestBody(JSON)
+                    method == "POST" || method == "PUT" -> "{}".toRequestBody(JSON)
+                    else -> null
+                }
+                requestBuilder.method(method, requestBody)
 
-            val response = try {
-                http.newCall(requestBuilder.build()).execute()
+                val response = http.newCall(requestBuilder.build()).execute()
+                response.use {
+                    val text = it.body?.string().orEmpty()
+                    if (!it.isSuccessful) {
+                        val message = runCatching { JSONObject(text).optString("error") }
+                            .getOrNull()?.takeIf { m -> m.isNotBlank() }
+                            ?: "Błąd serwera (${it.code})."
+                        throw ApiException(message, it.code)
+                    }
+                    if (text.isBlank()) JSONObject() else JSONObject(text)
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: ApiException) {
+                throw e
             } catch (e: IOException) {
                 throw ApiException("Brak połączenia z serwerem (${config.getBaseUrl()}).")
-            }
-
-            response.use {
-                val text = it.body?.string().orEmpty()
-                val json = if (text.isBlank()) JSONObject() else JSONObject(text)
-                if (!it.isSuccessful) {
-                    val message = json.optString("error").ifBlank { "Błąd serwera (${it.code})." }
-                    throw ApiException(message, it.code)
-                }
-                json
+            } catch (e: Exception) {
+                throw ApiException("Nieprawidłowa odpowiedź serwera z ${config.getBaseUrl()} — sprawdź czy to właściwy adres i czy backend jest zaktualizowany.")
             }
         }
 }
