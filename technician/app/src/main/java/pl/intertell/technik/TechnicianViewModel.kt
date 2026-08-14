@@ -189,6 +189,7 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
                 } else {
                     _selectedCustomer.value = match
                     navigate(TechScreen.CUST)
+                    loadFullCustomerDetail()
                 }
             } catch (e: CancellationException) {
                 throw e
@@ -227,15 +228,22 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
     fun openCustomer(customer: Customer) {
         _selectedCustomer.value = customer
         navigate(TechScreen.CUST)
+        loadFullCustomerDetail()
     }
+
+    // search/job results only carry the summary customerJSON() (name, address, devices, lms) —
+    // history and router settings are only present on the /customers/{id} detail response, so
+    // every entry point into the Customer screen must trigger this, not just the Router button.
+    private var detailLoadedForCustomerId: Long? = null
 
     private fun loadFullCustomerDetail() {
         val current = _selectedCustomer.value ?: return
-        if (current.router != null) return // already have it
+        if (detailLoadedForCustomerId == current.id) return // already have it
         viewModelScope.launch {
             _uiState.update { it.copy(customerDetailLoading = true) }
             try {
                 _selectedCustomer.value = repository.getCustomerDetail(current.id)
+                detailLoadedForCustomerId = current.id
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

@@ -9,24 +9,32 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import kotlinx.coroutines.delay
 import pl.intertell.technik.TechnicianViewModel
 import pl.intertell.technik.data.JobKind
 import pl.intertell.technik.ui.components.Card
 import pl.intertell.technik.ui.theme.IntertellColors
 import pl.intertell.technik.ui.theme.IntertellType
+
+private const val AUTO_REFRESH_INTERVAL_MS = 20_000L
 
 @Composable
 fun JobsScreen(viewModel: TechnicianViewModel) {
@@ -35,6 +43,16 @@ fun JobsScreen(viewModel: TechnicianViewModel) {
     val me by viewModel.me.collectAsState()
     val open = jobs.count { it.status != "done" }
     val urgentCount = jobs.count { it.isUrgent }
+
+    // The list otherwise only refreshes on login or on re-tapping the Zlecenia
+    // tab — poll quietly while this screen is visible so a zlecenie assigned
+    // while the technician is sitting here shows up without any action.
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(AUTO_REFRESH_INTERVAL_MS)
+            viewModel.refreshTasks()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -53,13 +71,24 @@ fun JobsScreen(viewModel: TechnicianViewModel) {
                     modifier = Modifier.padding(top = 5.dp),
                 )
             }
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(9.dp))
-                    .background(IntertellColors.GreenChipBg)
-                    .padding(horizontal = 11.dp, vertical = 7.dp),
-            ) {
-                Text("NA SŁUŻBIE", style = IntertellType.monoSmall, color = IntertellColors.Green)
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(9.dp))
+                        .clickable(enabled = !state.jobsLoading) { viewModel.refreshTasks() }
+                        .background(IntertellColors.ToggleTrackOffFaint)
+                        .padding(9.dp),
+                ) {
+                    Icon(Icons.Default.Refresh, contentDescription = "Odśwież", tint = IntertellColors.Text5, modifier = Modifier.size(16.dp))
+                }
+                Box(
+                    modifier = Modifier
+                        .clip(RoundedCornerShape(9.dp))
+                        .background(IntertellColors.GreenChipBg)
+                        .padding(horizontal = 11.dp, vertical = 7.dp),
+                ) {
+                    Text("NA SŁUŻBIE", style = IntertellType.monoSmall, color = IntertellColors.Green)
+                }
             }
         }
 

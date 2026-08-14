@@ -1,9 +1,13 @@
 package pl.intertell.technik
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
@@ -32,6 +36,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         askForNotificationPermission()
+        askToIgnoreBatteryOptimizations()
         val lastCrash = CrashHandler.readAndClearLastCrash(this)
         setContent {
             var crashText by remember { mutableStateOf(lastCrash) }
@@ -54,6 +59,22 @@ class MainActivity : ComponentActivity() {
             PackageManager.PERMISSION_GRANTED
         if (!granted) {
             requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    // Without this, MIUI/Samsung/etc.-style battery managers routinely kill the
+    // WorkManager periodic poll outright, so "new zlecenie" notifications never
+    // arrive even though the code behind them is correct — this is the single
+    // biggest real-world cause of "missing" notifications on Android in Poland.
+    private fun askToIgnoreBatteryOptimizations() {
+        val powerManager = getSystemService(PowerManager::class.java) ?: return
+        if (powerManager.isIgnoringBatteryOptimizations(packageName)) return
+        try {
+            startActivity(
+                Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS, Uri.parse("package:$packageName")),
+            )
+        } catch (e: android.content.ActivityNotFoundException) {
+            // some OEM ROMs strip this screen — nothing more we can do from here
         }
     }
 }
