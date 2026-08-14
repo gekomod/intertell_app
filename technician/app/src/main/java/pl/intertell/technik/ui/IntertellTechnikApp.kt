@@ -40,17 +40,17 @@ fun IntertellTechnikApp(viewModel: TechnicianViewModel) {
                 TechScreen.LOGIN -> LoginScreen(viewModel, state)
                 TechScreen.JOBS -> JobsScreen(viewModel)
                 TechScreen.JOB -> JobDetailScreen(viewModel)
-                TechScreen.REPORT -> ReportScreen(viewModel, state)
-                TechScreen.SEARCH -> SearchScreen(viewModel, state)
+                TechScreen.REPORT -> ReportScreen(viewModel)
+                TechScreen.SEARCH -> SearchScreen(viewModel)
                 TechScreen.CUST -> CustomerScreen(viewModel)
-                TechScreen.ROUTER -> RouterScreen(viewModel, state)
-                TechScreen.ADMIN -> AdminScreen(viewModel, state)
+                TechScreen.ROUTER -> RouterScreen(viewModel)
+                TechScreen.ADMIN -> AdminScreen(viewModel)
             }
 
             if (state.jobDone) {
                 FullScreenOutcome(
-                    title = "Zlecenie zamknięte",
-                    body = "Raport i pomiary wysłane do LMS. Klient dostał potwierdzenie w aplikacji.",
+                    title = "Zgłoszenie zakończone",
+                    body = "Status zapisany w bazie intratell.",
                     ctaText = "Następne zlecenie",
                     onCta = viewModel::closeJobDone,
                 )

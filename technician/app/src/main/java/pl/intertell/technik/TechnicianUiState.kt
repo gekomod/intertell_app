@@ -2,24 +2,20 @@ package pl.intertell.technik
 
 enum class TechScreen { LOGIN, JOBS, JOB, REPORT, SEARCH, CUST, ROUTER, ADMIN }
 
-enum class CustomerFilter { ALL, AWARIA }
-
 data class TechnicianUiState(
     val screen: TechScreen = TechScreen.LOGIN,
     val loginLoading: Boolean = false,
     val loginError: String? = null,
-    val jobIndex: Int = 0,
-    val customerIndex: Int = 0,
+    val serverUrl: String = "",
+    val jobsLoading: Boolean = false,
     val jobDone: Boolean = false,
-    val deviceAdded: Boolean = false,
-    val qosEnabled: Boolean = true,
-    val wifi24Enabled: Boolean = true,
-    val wifi5Enabled: Boolean = true,
-    val meshEnabled: Boolean = true,
-    val speedTestRun: Boolean = false,
-    val teamMemberInvited: Boolean = false,
+    val actionInFlight: Boolean = false,
     val searchQuery: String = "",
-    val searchFilter: CustomerFilter = CustomerFilter.ALL,
+    val searchLoading: Boolean = false,
+    val customerDetailLoading: Boolean = false,
+    val teamLoading: Boolean = false,
+    val errorMessage: String? = null,
+    val infoMessage: String? = null,
 ) {
     val showBottomBar: Boolean get() = screen != TechScreen.LOGIN && screen != TechScreen.JOB
 }

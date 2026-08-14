@@ -16,13 +16,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import pl.intertell.technik.TechnicianViewModel
-import pl.intertell.technik.data.CustomerState
 import pl.intertell.technik.ui.components.BackLink
 import pl.intertell.technik.ui.components.OutlineButton
 import pl.intertell.technik.ui.components.SolidButton
@@ -32,8 +33,9 @@ import pl.intertell.technik.ui.theme.IntertellType
 @Composable
 fun CustomerScreen(viewModel: TechnicianViewModel) {
     val context = LocalContext.current
-    val customer = viewModel.currentCustomer()
-    val stateColor = if (customer.state == CustomerState.OK) IntertellColors.GreenCheck else IntertellColors.Danger
+    val customer by viewModel.selectedCustomer.collectAsState()
+    if (customer == null) return
+    val c = customer!!
 
     Column(
         modifier = Modifier
@@ -43,9 +45,9 @@ fun CustomerScreen(viewModel: TechnicianViewModel) {
             .padding(top = 20.dp, bottom = 20.dp),
     ) {
         BackLink("← Klienci", onClick = viewModel::goSearch)
-        Text(customer.address, style = IntertellType.headline, color = IntertellColors.TextPrimary, modifier = Modifier.padding(top = 14.dp))
+        Text(c.address.ifBlank { c.name }, style = IntertellType.headline, color = IntertellColors.TextPrimary, modifier = Modifier.padding(top = 14.dp))
         Text(
-            "${customer.name} · ${customer.contract}",
+            "${c.name} · ${c.customerNo}",
             style = IntertellType.body,
             color = IntertellColors.Text6,
             modifier = Modifier.padding(top = 5.dp),
@@ -60,38 +62,40 @@ fun CustomerScreen(viewModel: TechnicianViewModel) {
                 .padding(horizontal = 20.dp, vertical = 18.dp),
         ) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Text("Stan usługi", style = IntertellType.bodySmall, color = IntertellColors.White.copy(alpha = 0.55f))
-                Text(customer.state.name, style = IntertellType.monoSmall, color = stateColor)
+                Text("Stan konta", style = IntertellType.bodySmall, color = IntertellColors.White.copy(alpha = 0.55f))
+                Text(c.statusLabel.uppercase(), style = IntertellType.monoSmall, color = IntertellColors.GreenCheck)
             }
-            Text(customer.plan, style = IntertellType.headline, color = IntertellColors.White, modifier = Modifier.padding(top = 6.dp))
-            Row(modifier = Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-                NavyMetric("ONT", customer.ont)
-                NavyMetric("RX", customer.rx)
-                NavyMetric("OLT / PORT", customer.olt)
+            if (c.lms != null) {
+                Row(modifier = Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                    NavyMetric("SALDO (LMS)", c.lms.balanceZl + " zł")
+                    NavyMetric("ŁĄCZE", if (c.lms.connectionUp) "aktywne" else "brak")
+                }
+            } else {
+                Text(
+                    "Klient nie jest połączony z LMS — brak danych o saldzie/łączu na żywo.",
+                    style = IntertellType.bodySmall,
+                    color = IntertellColors.White.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(top = 10.dp),
+                )
             }
         }
 
-        SolidButton("Otwórz panel ONT Huawei", onClick = viewModel::goRouter, modifier = Modifier.padding(top = 14.dp))
+        if (c.devices.isNotEmpty()) {
+            SolidButton("Otwórz panel ONT / routera", onClick = viewModel::goRouter, modifier = Modifier.padding(top = 14.dp))
+        }
         Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            OutlineButton(
-                "Zadzwoń",
-                onClick = { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:${customer.phone}"))) },
-                modifier = Modifier.weight(1f),
-                height = 48,
-            )
             OutlineButton(
                 "Nawiguj",
                 onClick = {
-                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(customer.address + ", Ostrów")}")))
+                    context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("geo:0,0?q=${Uri.encode(c.address)}")))
                 },
                 modifier = Modifier.weight(1f),
                 height = 48,
             )
-            OutlineButton("Nowe zlecenie", onClick = {}, modifier = Modifier.weight(1f), height = 48)
         }
 
         Text(
-            "Historia awarii i wizyt",
+            "Urządzenia (${c.devices.size})",
             style = IntertellType.bodyBold,
             color = IntertellColors.TextPrimary,
             modifier = Modifier.padding(top = 22.dp, bottom = 10.dp),
@@ -102,22 +106,25 @@ fun CustomerScreen(viewModel: TechnicianViewModel) {
                 .clip(RoundedCornerShape(18.dp))
                 .background(IntertellColors.White),
         ) {
-            customer.history.forEachIndexed { index, entry ->
+            c.devices.forEachIndexed { index, d ->
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(entry.what, style = IntertellType.titleBold, color = IntertellColors.TextPrimary)
-                        Text(entry.date, style = IntertellType.monoSmall, color = IntertellColors.Text5)
+                        Text(d.kindLabel, style = IntertellType.titleBold, color = IntertellColors.TextPrimary)
+                        Text(d.status, style = IntertellType.monoSmall, color = IntertellColors.Text5)
                     }
-                    Text(entry.note, style = IntertellType.body, color = IntertellColors.Text55, modifier = Modifier.padding(top = 4.dp))
+                    Text("${d.model} · SN ${d.serial}", style = IntertellType.mono, color = IntertellColors.Text5, modifier = Modifier.padding(top = 4.dp))
+                    if (d.location.isNotBlank()) {
+                        Text(d.location, style = IntertellType.body, color = IntertellColors.Text55, modifier = Modifier.padding(top = 2.dp))
+                    }
                 }
-                if (index != customer.history.lastIndex) {
+                if (index != c.devices.lastIndex) {
                     Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(IntertellColors.HairlineOnLightFaint))
                 }
             }
         }
 
         Text(
-            "Dane abonenta pobrane z LMS. Podgląd nie obejmuje faktur ani danych płatniczych.",
+            "Dane klienta z bazy intratell; saldo i status łącza — z LMS gdy klient jest połączony.",
             style = IntertellType.monoFootnote,
             color = IntertellColors.Text45,
             modifier = Modifier.padding(top = 14.dp),

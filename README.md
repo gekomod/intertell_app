@@ -2,9 +2,27 @@
 
 Two native Android apps (Kotlin + Jetpack Compose) implemented from a Claude
 Design handoff: a subscriber app (`client/`) and a field technician app
-(`technician/`). Both use mock, in-memory data behind a repository interface
-— see each project's own README for details on screens and how to wire in a
-real backend later.
+(`technician/`).
+
+- **`client/`** — still mock, in-memory data behind a repository interface.
+- **`technician/`** — talks to the real intratell backend's `/api/tech/*`
+  JSON API (bearer-token auth; only technicians that exist in that
+  database, and only while `active`, can sign in). No offline/mock mode —
+  see `technician/app/src/main/java/pl/intertell/technik/data/`:
+  - `TechnicianRepository` — the interface every screen depends on.
+  - `api/ApiTechnicianRepository` — the (only) implementation, backed by
+    plain OkHttp + `org.json` (no Retrofit/kotlinx-serialization, kept
+    deliberately dependency-light since this app can't be build-verified
+    locally — see below).
+  - `api/ServerConfig` — DataStore-backed base URL + auth token. Default
+    base URL is `https://inter.nasdom.tech` (flagged temporary by
+    whoever's running it) but editable at runtime from the login screen's
+    "Zmień" link, no rebuild needed.
+
+  The backend side of this (new `/api/tech/*` routes, bearer-token
+  sessions, technician CRUD, customer search) lives in the separate
+  `intratell` Go server repo, not here — whoever deploys that server needs
+  the updated version for the app to have anything to talk to.
 
 ## Getting an APK
 

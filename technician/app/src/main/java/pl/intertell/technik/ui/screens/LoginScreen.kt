@@ -2,6 +2,7 @@ package pl.intertell.technik.ui.screens
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,10 +15,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -34,8 +35,10 @@ import pl.intertell.technik.ui.theme.IntertellType
 
 @Composable
 fun LoginScreen(viewModel: TechnicianViewModel, state: TechnicianUiState) {
-    var technicianId by remember { mutableStateOf("TCH-118") }
+    var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var editingServer by remember { mutableStateOf(false) }
+    var serverDraft by remember(state.serverUrl) { mutableStateOf(state.serverUrl) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
@@ -79,7 +82,7 @@ fun LoginScreen(viewModel: TechnicianViewModel, state: TechnicianUiState) {
                     .align(Alignment.CenterHorizontally),
             )
             Text(
-                "Zlecenia, instalacje, pomiary i dostęp do ONT klienta.",
+                "Zlecenia, instalacje i dostęp do klientów z bazy intratell.",
                 style = IntertellType.body,
                 color = IntertellColors.Text55,
                 modifier = Modifier
@@ -89,9 +92,9 @@ fun LoginScreen(viewModel: TechnicianViewModel, state: TechnicianUiState) {
 
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 LabeledTextField(
-                    label = "Identyfikator technika",
-                    value = technicianId,
-                    onValueChange = { technicianId = it },
+                    label = "E-mail służbowy",
+                    value = email,
+                    onValueChange = { email = it },
                 )
                 LabeledTextField(
                     label = "Hasło",
@@ -112,7 +115,7 @@ fun LoginScreen(viewModel: TechnicianViewModel, state: TechnicianUiState) {
 
             SolidButton(
                 text = if (state.loginLoading) "Logowanie…" else "Zaloguj się",
-                onClick = { viewModel.login(technicianId, password) },
+                onClick = { viewModel.login(email, password) },
                 enabled = !state.loginLoading,
                 modifier = Modifier.padding(top = 22.dp),
             )
@@ -122,13 +125,45 @@ fun LoginScreen(viewModel: TechnicianViewModel, state: TechnicianUiState) {
                 }
             }
 
+            if (!editingServer) {
+                Text(
+                    "Serwer: ${state.serverUrl} · Zmień",
+                    style = IntertellType.monoFootnote,
+                    color = IntertellColors.Text42,
+                    modifier = Modifier
+                        .padding(top = 22.dp)
+                        .clickable { editingServer = true },
+                )
+            } else {
+                Column(modifier = Modifier.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LabeledTextField(label = "Adres serwera", value = serverDraft, onValueChange = { serverDraft = it })
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "Zapisz",
+                            style = IntertellType.bodyBold,
+                            color = IntertellColors.Accent,
+                            modifier = Modifier.clickable {
+                                viewModel.setServerUrl(serverDraft)
+                                editingServer = false
+                            },
+                        )
+                        Text(
+                            "Anuluj",
+                            style = IntertellType.bodyBold,
+                            color = IntertellColors.Text55,
+                            modifier = Modifier.clickable { editingServer = false },
+                        )
+                    }
+                }
+            }
+
             Text(
-                "Konta techników zakłada i blokuje administrator w panelu na intertell.pl. Logowanie wymaga aktywnego statusu pracownika.",
+                "Konta techników zakłada i blokuje administrator. Logowanie wymaga aktywnego statusu pracownika.",
                 style = IntertellType.monoFootnote,
                 color = IntertellColors.Text42,
                 modifier = Modifier
-                    .padding(top = 40.dp)
-                    .width(220.dp),
+                    .padding(top = 14.dp)
+                    .width(240.dp),
             )
         }
     }
