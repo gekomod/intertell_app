@@ -102,7 +102,11 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             _uiState.update { it.copy(jobsLoading = true, errorMessage = null) }
             try {
-                _jobs.value = repository.getTasks()
+                val tasks = repository.getTasks()
+                _jobs.value = tasks
+                // Seen live in the Jobs screen — TaskPollWorker shouldn't
+                // notify about these later just because it polls next.
+                apiRepository.serverConfig.addSeenTaskKeys(tasks.map { "${it.kind}:${it.id}" })
             } catch (e: ApiException) {
                 _uiState.update { it.copy(errorMessage = e.message) }
             }

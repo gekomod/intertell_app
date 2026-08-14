@@ -3,6 +3,7 @@ package pl.intertell.technik.data.api
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -38,5 +39,26 @@ class ServerConfig(private val context: Context) {
         context.dataStore.edit {
             if (token == null) it.remove(tokenKey) else it[tokenKey] = token
         }
+    }
+
+    // --- Seen-task bookkeeping for TaskPollWorker (see notifications/) ---
+    // A task ("kind:id", e.g. "MESSAGE:42") already in this set either
+    // already got a notification, or was seen live in the Jobs screen —
+    // either way TaskPollWorker shouldn't notify for it again.
+    private val seenTasksKey = stringSetPreferencesKey("seen_task_keys")
+
+    suspend fun getSeenTaskKeys(): Set<String> =
+        context.dataStore.data.map { it[seenTasksKey] ?: emptySet() }.first()
+
+    suspend fun addSeenTaskKeys(keys: Collection<String>) {
+        if (keys.isEmpty()) return
+        context.dataStore.edit { prefs ->
+            val current = prefs[seenTasksKey] ?: emptySet()
+            prefs[seenTasksKey] = current + keys
+        }
+    }
+
+    suspend fun clearSeenTaskKeys() {
+        context.dataStore.edit { it.remove(seenTasksKey) }
     }
 }

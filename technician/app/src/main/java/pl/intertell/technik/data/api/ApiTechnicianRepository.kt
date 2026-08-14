@@ -30,6 +30,7 @@ class ApiTechnicianRepository(context: Context) : TechnicianRepository {
     override suspend fun logout() {
         runCatching { api.post("/api/tech/logout") }
         api.serverConfig.setToken(null)
+        api.serverConfig.clearSeenTaskKeys()
     }
 
     override suspend fun getTasks(): List<Job> {
