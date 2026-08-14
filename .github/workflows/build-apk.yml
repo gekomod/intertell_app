@@ -13,6 +13,7 @@ jobs:
     name: Build ${{ matrix.app }}
     runs-on: ubuntu-latest
     strategy:
+      fail-fast: false
       matrix:
         app: [client, technician]
     steps:
@@ -29,7 +30,21 @@ jobs:
 
       - name: Build debug APK
         working-directory: ${{ matrix.app }}
-        run: gradle assembleDebug --no-daemon --stacktrace
+        shell: bash
+        run: |
+          set +e
+          gradle assembleDebug --no-daemon --stacktrace 2>&1 | tee build.log
+          code=${PIPESTATUS[0]}
+          if [ "$code" -ne 0 ]; then
+            echo "::group::Gradle failure — last 150 lines"
+            tail -n 150 build.log
+            echo "::endgroup::"
+            tail -n 60 build.log | while IFS= read -r line; do
+              esc=${line//$'\r'/}
+              echo "::error::${esc}"
+            done
+          fi
+          exit "$code"
 
       - name: Rename APK
         working-directory: ${{ matrix.app }}
@@ -45,15 +60,17 @@ jobs:
   release:
     name: Publish release
     needs: build
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
           path: dist
           merge-multiple: true
+          if-no-files-found: warn
 
       - name: Show downloaded files
-        run: ls -la dist
+        run: ls -la dist || true
 
       - uses: softprops/action-gh-release@v2
         with:
