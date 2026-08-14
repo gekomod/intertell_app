@@ -16,6 +16,7 @@ import pl.intertell.technik.ui.screens.CustomerScreen
 import pl.intertell.technik.ui.screens.JobDetailScreen
 import pl.intertell.technik.ui.screens.JobsScreen
 import pl.intertell.technik.ui.screens.LoginScreen
+import pl.intertell.technik.ui.screens.QgisScreen
 import pl.intertell.technik.ui.screens.ReportScreen
 import pl.intertell.technik.ui.screens.RouterScreen
 import pl.intertell.technik.ui.screens.SearchScreen
@@ -45,6 +46,7 @@ fun IntertellTechnikApp(viewModel: TechnicianViewModel) {
                 TechScreen.CUST -> CustomerScreen(viewModel)
                 TechScreen.ROUTER -> RouterScreen(viewModel)
                 TechScreen.ADMIN -> AdminScreen(viewModel)
+                TechScreen.QGIS -> QgisScreen(viewModel)
             }
 
             if (state.jobDone) {

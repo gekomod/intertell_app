@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import pl.intertell.technik.TechnicianViewModel
 import pl.intertell.technik.data.JobKind
+import pl.intertell.technik.ui.components.AddressMapPreview
 import pl.intertell.technik.ui.components.BackLink
 import pl.intertell.technik.ui.components.Card
 import pl.intertell.technik.ui.components.OutlineButton
@@ -87,6 +88,10 @@ fun JobDetailScreen(viewModel: TechnicianViewModel) {
                     )
                 }
             }
+        }
+
+        if (j.address.isNotBlank()) {
+            AddressMapPreview(address = j.address, viewModel = viewModel, modifier = Modifier.padding(top = 14.dp))
         }
 
         if (j.kind == JobKind.MESSAGE && j.customerNo.isNotBlank()) {

@@ -124,6 +124,48 @@ fun CustomerScreen(viewModel: TechnicianViewModel) {
         }
 
         Text(
+            "Historia napraw (${c.history.size})",
+            style = IntertellType.bodyBold,
+            color = IntertellColors.TextPrimary,
+            modifier = Modifier.padding(top = 22.dp, bottom = 10.dp),
+        )
+        if (c.history.isEmpty()) {
+            Text(
+                "Brak wcześniejszych zgłoszeń serwisowych.",
+                style = IntertellType.body,
+                color = IntertellColors.Text55,
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(IntertellColors.White),
+            ) {
+                c.history.forEachIndexed { index, h ->
+                    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text(h.topic.ifBlank { "Zgłoszenie" }, style = IntertellType.titleBold, color = IntertellColors.TextPrimary)
+                            Text(h.statusLabel, style = IntertellType.monoSmall, color = IntertellColors.Text5)
+                        }
+                        Text(
+                            h.createdAt + (if (h.technicianName.isNotBlank()) " · ${h.technicianName}" else " · nieprzypisane"),
+                            style = IntertellType.mono,
+                            color = IntertellColors.Text5,
+                            modifier = Modifier.padding(top = 4.dp),
+                        )
+                        if (h.message.isNotBlank()) {
+                            Text(h.message, style = IntertellType.body, color = IntertellColors.Text55, modifier = Modifier.padding(top = 6.dp))
+                        }
+                    }
+                    if (index != c.history.lastIndex) {
+                        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(IntertellColors.HairlineOnLightFaint))
+                    }
+                }
+            }
+        }
+
+        Text(
             "Dane klienta z bazy intratell; saldo i status łącza — z LMS gdy klient jest połączony.",
             style = IntertellType.monoFootnote,
             color = IntertellColors.Text45,

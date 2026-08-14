@@ -10,6 +10,7 @@ import pl.intertell.technik.data.JobKind
 import pl.intertell.technik.data.LmsOnlyMatch
 import pl.intertell.technik.data.LmsStatus
 import pl.intertell.technik.data.RouterInfo
+import pl.intertell.technik.data.ServiceHistoryEntry
 import pl.intertell.technik.data.TeamMember
 import pl.intertell.technik.data.TechnicianRepository
 
@@ -132,10 +133,18 @@ private fun JSONObject.toCustomer(): Customer {
             vpnClientOn = it.optBoolean("vpn_client_on"), vpnServerOn = it.optBoolean("vpn_server_on"),
         )
     }
+    val history = optJSONArrayOrEmpty("history").map { it.toServiceHistoryEntry() }
     return Customer(
         id = getLong("id"), customerNo = optString("customer_no"), name = optString("name"),
         address = optString("address"), status = optString("status"), statusLabel = optString("status_label"),
         planId = optLong("plan_id"), isBusiness = optBoolean("is_business"),
         lmsCustomerId = optLong("lms_customer_id"), devices = devices, lms = lms, router = router,
+        history = history,
     )
 }
+
+private fun JSONObject.toServiceHistoryEntry() = ServiceHistoryEntry(
+    id = getLong("id"), topic = optString("topic"), message = optString("message"),
+    createdAt = optString("created_at"), status = optString("status"),
+    statusLabel = optString("status_label"), technicianName = optString("technician_name"),
+)

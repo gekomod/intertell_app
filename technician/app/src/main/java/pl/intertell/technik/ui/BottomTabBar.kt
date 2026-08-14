@@ -33,6 +33,7 @@ fun BottomTabBar(screen: TechScreen, viewModel: TechnicianViewModel) {
     ) {
         TabItem("Zlecenia", screen in jobsGroup, Modifier.weight(1f), onClick = viewModel::goJobs)
         TabItem("Klienci", screen in searchGroup, Modifier.weight(1f), onClick = viewModel::goSearch)
+        TabItem("QGIS", screen == TechScreen.QGIS, Modifier.weight(1f), onClick = viewModel::goQgis)
         TabItem("Zespół", screen == TechScreen.ADMIN, Modifier.weight(1f), onClick = viewModel::goAdmin)
         TabItem("Wyloguj", false, Modifier.weight(1f), onClick = viewModel::logout)
     }

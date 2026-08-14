@@ -17,6 +17,8 @@ import pl.intertell.technik.data.Job
 import pl.intertell.technik.data.TeamMember
 import pl.intertell.technik.data.TechnicianRepository
 import pl.intertell.technik.data.api.ApiTechnicianRepository
+import pl.intertell.technik.data.geo.LatLng
+import pl.intertell.technik.data.geo.NominatimGeocoder
 
 class TechnicianViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -43,6 +45,10 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
 
     private val _team = MutableStateFlow<List<TeamMember>>(emptyList())
     val team: StateFlow<List<TeamMember>> = _team.asStateFlow()
+
+    /** address -> coordinates, or null if geocoding that address failed. Absent key = not yet looked up. */
+    private val _geocodeCache = MutableStateFlow<Map<String, LatLng?>>(emptyMap())
+    val geocodeCache: StateFlow<Map<String, LatLng?>> = _geocodeCache.asStateFlow()
 
     private var searchJob: CoroutineJob? = null
 
@@ -95,6 +101,15 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
     fun goRouter() = navigate(TechScreen.ROUTER).also { loadFullCustomerDetail() }
     fun goCust() = navigate(TechScreen.CUST)
     fun goJob() = navigate(TechScreen.JOB)
+    fun goQgis() = navigate(TechScreen.QGIS)
+
+    fun geocodeAddress(address: String) {
+        if (address.isBlank() || _geocodeCache.value.containsKey(address)) return
+        viewModelScope.launch {
+            val result = runCatching { NominatimGeocoder.geocode(address) }.getOrNull()
+            _geocodeCache.update { it + (address to result) }
+        }
+    }
 
     private fun navigate(screen: TechScreen) = _uiState.update { it.copy(screen = screen) }
 

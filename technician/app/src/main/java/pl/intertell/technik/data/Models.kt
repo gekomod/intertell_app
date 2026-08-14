@@ -74,6 +74,16 @@ data class RouterInfo(
     val vpnServerOn: Boolean,
 )
 
+data class ServiceHistoryEntry(
+    val id: Long,
+    val topic: String,
+    val message: String,
+    val createdAt: String,
+    val status: String,
+    val statusLabel: String,
+    val technicianName: String,
+)
+
 data class Customer(
     val id: Long,
     val customerNo: String,
@@ -87,6 +97,7 @@ data class Customer(
     val devices: List<Device>,
     val lms: LmsStatus?,
     val router: RouterInfo? = null,
+    val history: List<ServiceHistoryEntry> = emptyList(),
 )
 
 data class LmsOnlyMatch(val lmsCustomerId: Long, val name: String)

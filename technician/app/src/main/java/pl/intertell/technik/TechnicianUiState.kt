@@ -1,6 +1,6 @@
 package pl.intertell.technik
 
-enum class TechScreen { LOGIN, JOBS, JOB, REPORT, SEARCH, CUST, ROUTER, ADMIN }
+enum class TechScreen { LOGIN, JOBS, JOB, REPORT, SEARCH, CUST, ROUTER, ADMIN, QGIS }
 
 data class TechnicianUiState(
     val screen: TechScreen = TechScreen.LOGIN,
