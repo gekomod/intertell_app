@@ -10,8 +10,14 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import pl.intertell.technik.crash.CrashHandler
+import pl.intertell.technik.crash.CrashScreen
 import pl.intertell.technik.ui.IntertellTechnikApp
 import pl.intertell.technik.ui.theme.IntertellColors
 import pl.intertell.technik.ui.theme.IntertellTheme
@@ -26,10 +32,17 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         askForNotificationPermission()
+        val lastCrash = CrashHandler.readAndClearLastCrash(this)
         setContent {
+            var crashText by remember { mutableStateOf(lastCrash) }
             IntertellTheme {
                 Surface(modifier = Modifier.fillMaxSize(), color = IntertellColors.AppBackground) {
-                    IntertellTechnikApp(viewModel)
+                    val crash = crashText
+                    if (crash != null) {
+                        CrashScreen(crashText = crash, onDismiss = { crashText = null })
+                    } else {
+                        IntertellTechnikApp(viewModel)
+                    }
                 }
             }
         }
