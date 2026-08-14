@@ -97,9 +97,9 @@ fun JobDetailScreen(viewModel: TechnicianViewModel) {
             )
         }
 
-        if (state.errorMessage != null) {
+        state.errorMessage?.let { error ->
             Text(
-                state.errorMessage,
+                error,
                 style = IntertellType.bodySmall,
                 color = IntertellColors.Danger,
                 modifier = Modifier.padding(top = 14.dp),

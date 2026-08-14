@@ -86,11 +86,11 @@ fun AdminScreen(viewModel: TechnicianViewModel) {
             )
         }
 
-        if (state.errorMessage != null) {
-            Text(state.errorMessage, style = IntertellType.bodySmall, color = IntertellColors.Danger, modifier = Modifier.padding(top = 12.dp))
+        state.errorMessage?.let { error ->
+            Text(error, style = IntertellType.bodySmall, color = IntertellColors.Danger, modifier = Modifier.padding(top = 12.dp))
         }
-        if (state.infoMessage != null) {
-            Text(state.infoMessage, style = IntertellType.bodySmall, color = IntertellColors.Green, modifier = Modifier.padding(top = 12.dp))
+        state.infoMessage?.let { info ->
+            Text(info, style = IntertellType.bodySmall, color = IntertellColors.Green, modifier = Modifier.padding(top = 12.dp))
         }
 
         Text(

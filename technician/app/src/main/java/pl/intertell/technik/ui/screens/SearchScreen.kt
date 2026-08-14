@@ -84,8 +84,8 @@ fun SearchScreen(viewModel: TechnicianViewModel) {
             }
         }
 
-        if (state.errorMessage != null) {
-            Text(state.errorMessage, style = IntertellType.bodySmall, color = IntertellColors.Danger, modifier = Modifier.padding(top = 10.dp))
+        state.errorMessage?.let { error ->
+            Text(error, style = IntertellType.bodySmall, color = IntertellColors.Danger, modifier = Modifier.padding(top = 10.dp))
         }
 
         Column(modifier = Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
