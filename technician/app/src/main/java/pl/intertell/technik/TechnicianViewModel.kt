@@ -26,6 +26,7 @@ import pl.intertell.technik.data.geo.LatLng
 import pl.intertell.technik.data.geo.NominatimGeocoder
 import pl.intertell.technik.data.geo.OsrmRouter
 import pl.intertell.technik.data.geo.RouteInfo
+import pl.intertell.technik.update.DownloadProgress
 import pl.intertell.technik.update.UpdateChecker
 import pl.intertell.technik.update.UpdateInfo
 import pl.intertell.technik.update.UpdateInstaller
@@ -70,6 +71,9 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
     private val _updateAvailable = MutableStateFlow<UpdateInfo?>(null)
     val updateAvailable: StateFlow<UpdateInfo?> = _updateAvailable.asStateFlow()
 
+    private val _downloadProgress = MutableStateFlow<DownloadProgress?>(null)
+    val downloadProgress: StateFlow<DownloadProgress?> = _downloadProgress.asStateFlow()
+
     private var searchJob: CoroutineJob? = null
 
     init {
@@ -87,8 +91,16 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
 
     fun startUpdateDownload() {
         val update = _updateAvailable.value ?: return
-        UpdateInstaller.startDownload(getApplication(), update)
         _updateAvailable.value = null
+        viewModelScope.launch {
+            UpdateInstaller.download(getApplication(), update).collect { progress ->
+                _downloadProgress.value = progress
+                if (progress.done || progress.failed) {
+                    delay(if (progress.failed) 2500 else 700)
+                    _downloadProgress.value = null
+                }
+            }
+        }
     }
 
     fun setServerUrl(url: String) {

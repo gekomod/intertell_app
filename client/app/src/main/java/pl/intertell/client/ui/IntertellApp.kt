@@ -22,6 +22,7 @@ import pl.intertell.client.ClientViewModel
 import pl.intertell.client.ui.components.FullScreenOutcome
 import pl.intertell.client.ui.components.ScrimOverlay
 import pl.intertell.client.ui.components.UpdateDialog
+import pl.intertell.client.ui.components.UpdateProgressDialog
 import pl.intertell.client.ui.screens.ContactScreen
 import pl.intertell.client.ui.screens.ContractsScreen
 import pl.intertell.client.ui.screens.DmzScreen
@@ -42,9 +43,13 @@ import pl.intertell.client.ui.theme.IntertellType
 fun IntertellApp(viewModel: ClientViewModel) {
     val state by viewModel.uiState.collectAsState()
     val update by viewModel.updateAvailable.collectAsState()
+    val downloadProgress by viewModel.downloadProgress.collectAsState()
 
     update?.let {
         UpdateDialog(update = it, onDismiss = viewModel::dismissUpdate, onInstall = viewModel::startUpdateDownload)
+    }
+    downloadProgress?.let {
+        UpdateProgressDialog(progress = it)
     }
 
     Scaffold(

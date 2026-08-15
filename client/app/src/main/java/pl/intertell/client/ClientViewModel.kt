@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -16,6 +17,7 @@ import pl.intertell.client.data.Invoice
 import pl.intertell.client.data.Plan
 import pl.intertell.client.data.ServiceStatus
 import pl.intertell.client.data.api.ApiIntertellRepository
+import pl.intertell.client.update.DownloadProgress
 import pl.intertell.client.update.UpdateChecker
 import pl.intertell.client.update.UpdateInfo
 import pl.intertell.client.update.UpdateInstaller
@@ -49,6 +51,9 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
     private val _updateAvailable = MutableStateFlow<UpdateInfo?>(null)
     val updateAvailable: StateFlow<UpdateInfo?> = _updateAvailable.asStateFlow()
 
+    private val _downloadProgress = MutableStateFlow<DownloadProgress?>(null)
+    val downloadProgress: StateFlow<DownloadProgress?> = _downloadProgress.asStateFlow()
+
     init {
         viewModelScope.launch {
             _uiState.update { it.copy(serverUrl = apiRepository.serverConfig.getBaseUrl()) }
@@ -64,8 +69,16 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
 
     fun startUpdateDownload() {
         val update = _updateAvailable.value ?: return
-        UpdateInstaller.startDownload(getApplication(), update)
         _updateAvailable.value = null
+        viewModelScope.launch {
+            UpdateInstaller.download(getApplication(), update).collect { progress ->
+                _downloadProgress.value = progress
+                if (progress.done || progress.failed) {
+                    delay(if (progress.failed) 2500 else 700)
+                    _downloadProgress.value = null
+                }
+            }
+        }
     }
 
     fun setServerUrl(url: String) {

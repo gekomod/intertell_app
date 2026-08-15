@@ -12,6 +12,7 @@ import pl.intertell.technik.TechScreen
 import pl.intertell.technik.TechnicianViewModel
 import pl.intertell.technik.ui.components.FullScreenOutcome
 import pl.intertell.technik.ui.components.UpdateDialog
+import pl.intertell.technik.ui.components.UpdateProgressDialog
 import pl.intertell.technik.ui.screens.AdminScreen
 import pl.intertell.technik.ui.screens.CustomerScreen
 import pl.intertell.technik.ui.screens.JobDetailScreen
@@ -26,9 +27,13 @@ import pl.intertell.technik.ui.screens.SearchScreen
 fun IntertellTechnikApp(viewModel: TechnicianViewModel) {
     val state by viewModel.uiState.collectAsState()
     val update by viewModel.updateAvailable.collectAsState()
+    val downloadProgress by viewModel.downloadProgress.collectAsState()
 
     update?.let {
         UpdateDialog(update = it, onDismiss = viewModel::dismissUpdate, onInstall = viewModel::startUpdateDownload)
+    }
+    downloadProgress?.let {
+        UpdateProgressDialog(progress = it)
     }
 
     Scaffold(
