@@ -36,6 +36,7 @@ import pl.intertell.client.ui.screens.PlanScreen
 import pl.intertell.client.ui.screens.ResetConfirmSheet
 import pl.intertell.client.ui.screens.ResetInProgressOverlay
 import pl.intertell.client.ui.screens.SettingsScreen
+import pl.intertell.client.ui.screens.SplashScreen
 import pl.intertell.client.ui.theme.IntertellColors
 import pl.intertell.client.ui.theme.IntertellType
 
@@ -81,6 +82,7 @@ fun IntertellApp(viewModel: ClientViewModel) {
                 }
                 Box(modifier = Modifier.fillMaxSize()) {
                     when (state.screen) {
+                        ClientScreen.SPLASH -> SplashScreen()
                         ClientScreen.LOGIN -> LoginScreen(viewModel, state)
                         ClientScreen.HOME -> HomeScreen(viewModel, state)
                         ClientScreen.INVOICES -> InvoicesScreen(viewModel, state)

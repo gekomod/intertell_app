@@ -23,6 +23,15 @@ interface IntertellRepository {
     suspend fun getPlans(): List<Plan>
 
     /**
+     * Requests a plan change. An upgrade is applied immediately server-side
+     * (returns true); a downgrade instead files a request for BOK to action
+     * at the next billing period (returns false) — matches the Pakiet
+     * screen's own copy about upgrades applying at once vs. downgrades
+     * needing a wniosek.
+     */
+    suspend fun changePlan(planId: Long): Boolean
+
+    /**
      * Reports a problem straight into the technician-assignable queue (the
      * same one the public site's contact form feeds) — an admin can assign
      * it to a technician on /admin/wiadomosci, and it then shows up in the

@@ -15,7 +15,11 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -24,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import pl.intertell.client.ClientUiState
 import pl.intertell.client.ClientViewModel
@@ -137,8 +142,8 @@ fun HomeScreen(viewModel: ClientViewModel, state: ClientUiState) {
         }
 
         Row(modifier = Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            QuickTile("Zmień pakiet", status?.planName ?: "", IntertellColors.Accent, Modifier.weight(1f), viewModel::goPlan)
-            QuickTile("Umowy", "dokumenty i regulaminy", IntertellColors.Navy, Modifier.weight(1f), viewModel::goContracts)
+            QuickTile("Zmień pakiet", status?.planName ?: "", Icons.Default.SwapHoriz, IntertellColors.Accent, Modifier.weight(1f), viewModel::goPlan)
+            QuickTile("Umowy", "dokumenty i regulaminy", Icons.Default.Description, IntertellColors.Navy, Modifier.weight(1f), viewModel::goContracts)
         }
     }
 }
@@ -172,9 +177,14 @@ private fun HomeActionPill(text: String, modifier: Modifier = Modifier, onClick:
 }
 
 @Composable
-private fun QuickTile(title: String, subtitle: String, dotColor: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
+private fun QuickTile(title: String, subtitle: String, icon: ImageVector, tint: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Card(modifier = modifier.clickable(onClick = onClick), padding = 16, radius = 18) {
-        Box(modifier = Modifier.size(22.dp).clip(RoundedCornerShape(6.dp)).background(dotColor))
+        Box(
+            modifier = Modifier.size(36.dp).clip(RoundedCornerShape(10.dp)).background(tint.copy(alpha = 0.12f)),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(icon, contentDescription = null, tint = tint, modifier = Modifier.size(20.dp))
+        }
         Text(title, style = IntertellType.bodyBold, color = IntertellColors.TextPrimary, modifier = Modifier.padding(top = 12.dp))
         Text(subtitle, style = IntertellType.label, color = IntertellColors.Text50, modifier = Modifier.padding(top = 3.dp))
     }

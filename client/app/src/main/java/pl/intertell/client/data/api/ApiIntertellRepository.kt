@@ -73,6 +73,9 @@ class ApiIntertellRepository(context: Context) : IntertellRepository {
         return plans.map { it.toPlan(currentPriceCents) }
     }
 
+    override suspend fun changePlan(planId: Long): Boolean =
+        api.post("/api/client/plan", JSONObject().put("plan_id", planId)).optBoolean("applied")
+
     override suspend fun reportProblem(subject: String, message: String, phone: String) {
         api.post(
             "/api/client/tickets",

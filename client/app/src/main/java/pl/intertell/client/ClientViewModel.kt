@@ -61,6 +61,12 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             _updateAvailable.value = runCatching { UpdateChecker.checkForUpdate(BuildConfig.BUILD_NUMBER) }.getOrNull()
         }
+        viewModelScope.launch {
+            delay(1600)
+            if (_uiState.value.screen == ClientScreen.SPLASH) {
+                _uiState.update { it.copy(screen = ClientScreen.LOGIN) }
+            }
+        }
     }
 
     fun dismissUpdate() {
@@ -222,12 +228,32 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
 
     fun closeSheet() = _uiState.update { it.copy(sheetPlanId = null) }
 
-    // Changing plans server-side isn't wired up yet (no admin-facing "plan change
-    // request" queue exists), so this — like in the original design's own "Wniosek
-    // przyjęty" copy for a downgrade — just confirms the intent locally.
-    fun confirmPlanChange() = _uiState.update { it.copy(planChangeDone = true) }
+    fun confirmPlanChange() {
+        val planId = _uiState.value.sheetPlanId ?: return
+        if (_uiState.value.actionInFlight) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(actionInFlight = true, errorMessage = null) }
+            try {
+                val applied = repository.changePlan(planId)
+                _plans.value = repository.getPlans()
+                if (applied) {
+                    val (acc, status) = repository.getAccountAndStatus()
+                    _account.value = acc
+                    _serviceStatus.value = status
+                }
+                _uiState.update { it.copy(planChangeDone = true, planChangeApplied = applied) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.update { it.copy(errorMessage = e.message) }
+            }
+            _uiState.update { it.copy(actionInFlight = false) }
+        }
+    }
 
-    fun closeDone() = _uiState.update { it.copy(planChangeDone = false, sheetPlanId = null, screen = ClientScreen.PLAN) }
+    fun closeDone() = _uiState.update {
+        it.copy(planChangeDone = false, planChangeApplied = false, sheetPlanId = null, screen = ClientScreen.PLAN)
+    }
 
     fun currentPlanSheet(): Plan? = _uiState.value.sheetPlanId?.let { id -> _plans.value.firstOrNull { it.id == id } }
 

@@ -74,8 +74,13 @@ fun PlanChangeSheet(viewModel: ClientViewModel, state: ClientUiState) {
         }
 
         SolidButton(
-            text = if (requiresRequest) "Złóż wniosek o zmianę" else "Potwierdzam zmianę",
+            text = when {
+                state.actionInFlight -> "Wysyłanie…"
+                requiresRequest -> "Złóż wniosek o zmianę"
+                else -> "Potwierdzam zmianę"
+            },
             onClick = viewModel::confirmPlanChange,
+            enabled = !state.actionInFlight,
             modifier = Modifier.padding(top = 18.dp),
         )
         Box(
@@ -107,8 +112,7 @@ private fun SheetLine(label: String, value: String, top: Dp = 0.dp) {
 
 @Composable
 fun PlanChangeDoneOverlay(viewModel: ClientViewModel, state: ClientUiState) {
-    val plan = viewModel.currentPlanSheet() ?: return
-    val requiresRequest = plan.requiresRequest
+    val requiresRequest = !state.planChangeApplied
     FullScreenOutcome(
         title = if (requiresRequest) "Wniosek przyjęty" else "Pakiet zmieniony",
         body = if (requiresRequest) {

@@ -7,8 +7,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -39,14 +42,24 @@ fun LoginScreen(viewModel: ClientViewModel, state: ClientUiState) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .verticalScroll(rememberScrollState())
             .padding(horizontal = 28.dp),
         verticalArrangement = Arrangement.Center,
     ) {
+        Image(
+            painter = painterResource(R.drawable.mascot_client),
+            contentDescription = null,
+            contentScale = ContentScale.Fit,
+            modifier = Modifier
+                .height(150.dp)
+                .align(Alignment.CenterHorizontally),
+        )
         Image(
             painter = painterResource(R.drawable.logo_intertell),
             contentDescription = "Intertell",
             contentScale = ContentScale.Fit,
             modifier = Modifier
+                .padding(top = 10.dp)
                 .width(212.dp)
                 .align(Alignment.CenterHorizontally),
         )
@@ -55,7 +68,7 @@ fun LoginScreen(viewModel: ClientViewModel, state: ClientUiState) {
             style = IntertellType.display,
             color = IntertellColors.TextPrimary,
             modifier = Modifier
-                .padding(top = 30.dp)
+                .padding(top = 26.dp)
                 .align(Alignment.CenterHorizontally),
         )
         Text(

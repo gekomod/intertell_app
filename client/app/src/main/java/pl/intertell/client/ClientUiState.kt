@@ -1,9 +1,9 @@
 package pl.intertell.client
 
-enum class ClientScreen { LOGIN, HOME, INVOICES, INVOICE, CONTRACTS, PLAN, SETTINGS, DMZ, CONTACT }
+enum class ClientScreen { SPLASH, LOGIN, HOME, INVOICES, INVOICE, CONTRACTS, PLAN, SETTINGS, DMZ, CONTACT }
 
 data class ClientUiState(
-    val screen: ClientScreen = ClientScreen.LOGIN,
+    val screen: ClientScreen = ClientScreen.SPLASH,
     val serverUrl: String = "",
     val loginLoading: Boolean = false,
     val loginError: String? = null,
@@ -15,6 +15,7 @@ data class ClientUiState(
     val errorMessage: String? = null,
     val sheetPlanId: Long? = null,
     val planChangeDone: Boolean = false,
+    val planChangeApplied: Boolean = false,
     val resetSheetOpen: Boolean = false,
     val resetInProgress: Boolean = false,
     val ticketSent: Boolean = false,
@@ -23,6 +24,6 @@ data class ClientUiState(
     val pushNotifications: Boolean = true,
     val smsAlerts: Boolean = false,
 ) {
-    val showBottomBar: Boolean get() = screen != ClientScreen.LOGIN
+    val showBottomBar: Boolean get() = screen != ClientScreen.LOGIN && screen != ClientScreen.SPLASH
     val showPlanSheet: Boolean get() = sheetPlanId != null && !planChangeDone
 }
