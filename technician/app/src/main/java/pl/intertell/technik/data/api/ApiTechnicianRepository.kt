@@ -102,7 +102,7 @@ private fun JSONObject.toTeamMember() = TeamMember(
 private fun JSONObject.toMessageJob() = Job(
     id = getLong("id"), kind = JobKind.MESSAGE,
     title = optString("topic").ifBlank { "Zapytanie kontaktowe" },
-    clientName = optString("name"), phone = optString("phone"), address = "",
+    clientName = optString("name"), phone = optString("phone"), address = optString("address"),
     detail = optString("message"), createdAt = optString("created_at"), status = optString("status", "new"),
     customerNo = optString("customer_no"),
 )
