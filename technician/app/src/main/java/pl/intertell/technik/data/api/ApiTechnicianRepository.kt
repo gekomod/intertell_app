@@ -99,12 +99,15 @@ private fun JSONObject.toTeamMember() = TeamMember(
     active = optBoolean("active", true),
 )
 
+private fun JSONObject.optDoubleOrNull(key: String): Double? = if (has(key) && !isNull(key)) optDouble(key) else null
+
 private fun JSONObject.toMessageJob() = Job(
     id = getLong("id"), kind = JobKind.MESSAGE,
     title = optString("topic").ifBlank { "Zapytanie kontaktowe" },
     clientName = optString("name"), phone = optString("phone"), address = optString("address"),
     detail = optString("message"), createdAt = optString("created_at"), status = optString("status", "new"),
     customerNo = optString("customer_no"),
+    lat = optDoubleOrNull("lat"), lon = optDoubleOrNull("lon"),
 )
 
 private fun JSONObject.toInstallJob() = Job(
@@ -112,6 +115,7 @@ private fun JSONObject.toInstallJob() = Job(
     title = "Zgłoszenie instalacyjne",
     clientName = optString("name"), phone = optString("phone"), address = optString("address"),
     detail = "", createdAt = optString("created_at"), status = optString("status", "new"),
+    lat = optDoubleOrNull("lat"), lon = optDoubleOrNull("lon"),
 )
 
 private fun JSONObject.toDevice() = Device(

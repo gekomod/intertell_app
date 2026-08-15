@@ -35,6 +35,9 @@ data class Job(
     val status: String, // new | assigned | in_progress | done
     /** Only ever set for [JobKind.MESSAGE] — install requests aren't linked to a customer record. */
     val customerNo: String = "",
+    /** Server-geocoded coordinates for [address], when the server could resolve it — see api_tech.go's use of internal/geo. */
+    val lat: Double? = null,
+    val lon: Double? = null,
 ) {
     val statusLabel: String
         get() = when (status) {

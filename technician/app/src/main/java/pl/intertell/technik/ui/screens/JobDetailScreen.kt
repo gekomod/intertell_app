@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import pl.intertell.technik.TechnicianViewModel
 import pl.intertell.technik.data.JobKind
+import pl.intertell.technik.data.geo.LatLng
 import pl.intertell.technik.ui.components.AddressMapPreview
 import pl.intertell.technik.ui.components.BackLink
 import pl.intertell.technik.ui.components.Card
@@ -41,7 +42,11 @@ fun JobDetailScreen(viewModel: TechnicianViewModel) {
             .verticalScroll(rememberScrollState()),
     ) {
         if (j.address.isNotBlank()) {
-            AddressMapPreview(address = j.address, viewModel = viewModel, height = 210.dp, rounded = false, showRoute = true)
+            val known = if (j.lat != null && j.lon != null) LatLng(j.lat, j.lon) else null
+            AddressMapPreview(
+                address = j.address, viewModel = viewModel, height = 210.dp, rounded = false,
+                showRoute = true, knownLocation = known,
+            )
         }
         Column(modifier = Modifier.padding(20.dp)) {
         BackLink("← Zlecenia", onClick = viewModel::goJobs)

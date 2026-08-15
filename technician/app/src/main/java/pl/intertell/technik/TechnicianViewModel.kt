@@ -139,6 +139,11 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    /** Coordinates the server already resolved (see Job.lat/lon) — skips the client-side geocode entirely. */
+    fun seedLocation(address: String, lat: Double, lon: Double) {
+        _geocodeCache.update { it + (address to LatLng(lat, lon)) }
+    }
+
     /** Needs both a resolved geocode for [address] and a location permission grant with a recent fix — silently no-ops otherwise. */
     fun computeRoute(address: String) {
         if (_routeCache.value.containsKey(address)) return

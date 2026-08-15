@@ -19,16 +19,23 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import pl.intertell.technik.TechnicianViewModel
+import pl.intertell.technik.data.geo.LatLng
 import pl.intertell.technik.ui.theme.IntertellColors
 import pl.intertell.technik.ui.theme.IntertellType
 import java.util.Locale
 
 /**
- * Map preview for a job/customer address — geocoded via OSM's Nominatim, then
- * shown via openstreetmap.org's own official embeddable map (the same widget
- * behind its "Share > Embed" feature), rather than a third-party static-map
- * compositor: that's OSM's own, well-maintained infrastructure, so it's far
- * less likely to silently fail in the field than a small community service.
+ * Map preview for a job/customer address. The server resolves and sends
+ * coordinates for every job address up front (see api_tech.go's use of
+ * internal/geo) — pass those in as [knownLocation] to skip client-side
+ * geocoding entirely, which is what job-detail screens should always do,
+ * since Nominatim's public API is unreliable when called directly from a
+ * phone (see internal/geo/geocode.go's doc comment). Falls back to an
+ * on-device Nominatim lookup only when the server didn't supply one.
+ *
+ * Rendered via openstreetmap.org's own official embeddable map (the same
+ * widget behind its "Share > Embed" feature) rather than a third-party
+ * static-map compositor.
  *
  * With [showRoute], also overlays a "mapa · trasa X km · Y min" caption —
  * matching the original design's job-detail header — computed from the
@@ -43,11 +50,18 @@ fun AddressMapPreview(
     height: androidx.compose.ui.unit.Dp = 180.dp,
     rounded: Boolean = true,
     showRoute: Boolean = false,
+    knownLocation: LatLng? = null,
 ) {
     if (address.isBlank()) return
     val geocodeCache by viewModel.geocodeCache.collectAsState()
-    LaunchedEffect(address) { viewModel.geocodeAddress(address) }
-    val latLng = geocodeCache[address]
+    LaunchedEffect(address, knownLocation) {
+        if (knownLocation != null) {
+            viewModel.seedLocation(address, knownLocation.lat, knownLocation.lon)
+        } else {
+            viewModel.geocodeAddress(address)
+        }
+    }
+    val latLng = knownLocation ?: geocodeCache[address]
 
     val routeCache by viewModel.routeCache.collectAsState()
     LaunchedEffect(latLng) {
