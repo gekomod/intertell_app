@@ -42,15 +42,19 @@ import kotlin.math.tan
  * phone (see internal/geo/geocode.go's doc comment). Falls back to an
  * on-device Nominatim lookup only when the server didn't supply one.
  *
- * Rendered as a single official OSM raster tile (tile.openstreetmap.org) —
- * a plain image fetch, not an embedded webpage. An embedded openstreetmap.org
- * page in a WebView (the previous approach) rendered as a blank box on at
- * least one real device; a static tile has far fewer ways to fail (no
- * JavaScript, no page/CSS/Leaflet loading, just one PNG). It isn't pixel-
- * centered on the pin — the marker shown is the box's visual center, which
- * is "the tile containing the address," accurate to within the tile's
- * ground size — a deliberate precision-for-reliability trade for what's
- * only ever a rough visual aid; turn-by-turn still goes through "Nawiguj".
+ * Rendered as a single raster map tile from MapTiler (needs
+ * BuildConfig.MAPTILER_API_KEY, injected by CI from the MAPTILER_API_KEY repo
+ * secret) — a plain image fetch, not an embedded webpage. Two earlier
+ * approaches didn't hold up: an embedded openstreetmap.org page in a WebView
+ * rendered as a blank box on a real device, and OSM's own raw tile server
+ * (tile.openstreetmap.org) actively blocks direct app-embedded requests per
+ * its usage policy ("Access blocked — App is not following the tile usage
+ * policy..."). A plain PNG from a provider meant for exactly this has far
+ * fewer ways to fail. It isn't pixel-centered on the pin — the marker shown
+ * is the box's visual center, which is "the tile containing the address,"
+ * accurate to within the tile's ground size — a deliberate precision-for-
+ * reliability trade for what's only ever a rough visual aid; turn-by-turn
+ * still goes through "Nawiguj".
  *
  * With [showRoute], also overlays a "mapa · trasa X km · Y min" caption —
  * matching the original design's job-detail header — computed from the
@@ -98,7 +102,7 @@ fun AddressMapPreview(
                 val tileX = lonToTileX(latLng.lon, zoom)
                 val tileY = latToTileY(latLng.lat, zoom)
                 AsyncImage(
-                    model = "https://tile.openstreetmap.org/$zoom/$tileX/$tileY.png",
+                    model = "https://api.maptiler.com/maps/streets-v2/$zoom/$tileX/$tileY.png?key=${pl.intertell.technik.BuildConfig.MAPTILER_API_KEY}",
                     contentDescription = "Mapa: $address",
                     modifier = Modifier.fillMaxWidth().height(height),
                     contentScale = ContentScale.Crop,

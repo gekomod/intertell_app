@@ -8,6 +8,13 @@ plugins {
 // release to detect and offer in-app updates. Defaults to 1 for local builds.
 val buildNumber = (project.findProperty("buildNumber") as String?)?.toIntOrNull() ?: 1
 
+// CI passes this from the MAPTILER_API_KEY repo secret — tile.openstreetmap.org
+// actively blocks direct app-embedded tile requests per its own usage policy
+// ("Access blocked — App is not following the tile usage policy..."), so the
+// job-detail map uses MapTiler's tile service instead, which is meant for
+// exactly this. Empty for local builds without the property set.
+val mapTilerApiKey = (project.findProperty("mapTilerApiKey") as String?) ?: ""
+
 android {
     namespace = "pl.intertell.technik"
     compileSdk = 34
@@ -19,6 +26,7 @@ android {
         versionCode = buildNumber
         versionName = "1.0.$buildNumber"
         buildConfigField("int", "BUILD_NUMBER", "$buildNumber")
+        buildConfigField("String", "MAPTILER_API_KEY", "\"$mapTilerApiKey\"")
     }
 
     // A fixed, checked-in debug keystore — without this, every CI run signs
