@@ -8,6 +8,7 @@ import pl.intertell.technik.data.Device
 import pl.intertell.technik.data.Job
 import pl.intertell.technik.data.JobKind
 import pl.intertell.technik.data.LmsOnlyMatch
+import pl.intertell.technik.data.LoginResult
 import pl.intertell.technik.data.LmsStatus
 import pl.intertell.technik.data.RouterInfo
 import pl.intertell.technik.data.ServiceHistoryEntry
@@ -18,14 +19,17 @@ class ApiTechnicianRepository(context: Context) : TechnicianRepository {
     private val api = ApiClient(context)
     val serverConfig: ServerConfig get() = api.serverConfig
 
-    override suspend fun login(email: String, password: String): TeamMember {
+    override suspend fun login(code: String, password: String): LoginResult {
         val response = api.post(
             "/api/tech/login",
-            JSONObject().put("email", email).put("password", password),
+            JSONObject().put("code", code).put("password", password),
         )
         val token = response.getString("token")
         api.serverConfig.setToken(token)
-        return response.getJSONObject("technician").toTeamMember()
+        return LoginResult(
+            technician = response.getJSONObject("technician").toTeamMember(),
+            officePhone = response.optString("office_phone"),
+        )
     }
 
     override suspend fun logout() {
@@ -90,7 +94,7 @@ class ApiTechnicianRepository(context: Context) : TechnicianRepository {
 }
 
 private fun JSONObject.toTeamMember() = TeamMember(
-    id = getLong("id"), name = optString("name"), email = optString("email"),
+    id = getLong("id"), code = optString("code"), name = optString("name"), email = optString("email"),
     phone = optString("phone"), specialization = optString("specialization"),
     active = optBoolean("active", true),
 )

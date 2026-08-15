@@ -35,7 +35,7 @@ import pl.intertell.technik.ui.theme.IntertellType
 
 @Composable
 fun LoginScreen(viewModel: TechnicianViewModel, state: TechnicianUiState) {
-    var email by remember { mutableStateOf("") }
+    var code by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var editingServer by remember { mutableStateOf(false) }
     var serverDraft by remember(state.serverUrl) { mutableStateOf(state.serverUrl) }
@@ -92,9 +92,10 @@ fun LoginScreen(viewModel: TechnicianViewModel, state: TechnicianUiState) {
 
             Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 LabeledTextField(
-                    label = "E-mail służbowy",
-                    value = email,
-                    onValueChange = { email = it },
+                    label = "Identyfikator technika",
+                    value = code,
+                    onValueChange = { code = it },
+                    placeholder = "np. TCH-12",
                 )
                 LabeledTextField(
                     label = "Hasło",
@@ -115,7 +116,7 @@ fun LoginScreen(viewModel: TechnicianViewModel, state: TechnicianUiState) {
 
             SolidButton(
                 text = if (state.loginLoading) "Logowanie…" else "Zaloguj się",
-                onClick = { viewModel.login(email, password) },
+                onClick = { viewModel.login(code, password) },
                 enabled = !state.loginLoading,
                 modifier = Modifier.padding(top = 22.dp),
             )

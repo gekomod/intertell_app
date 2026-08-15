@@ -2,6 +2,7 @@ package pl.intertell.technik.data
 
 data class TeamMember(
     val id: Long,
+    val code: String,
     val name: String,
     val email: String,
     val phone: String,
@@ -11,6 +12,8 @@ data class TeamMember(
     val initials: String
         get() = name.split(" ").mapNotNull { it.firstOrNull()?.uppercaseChar() }.joinToString("")
 }
+
+data class LoginResult(val technician: TeamMember, val officePhone: String)
 
 enum class JobKind { MESSAGE, INSTALL }
 

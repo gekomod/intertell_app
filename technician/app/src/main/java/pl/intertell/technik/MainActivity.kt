@@ -33,9 +33,13 @@ class MainActivity : ComponentActivity() {
     private val requestNotificationPermission =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { /* no-op either way — just no notifications if denied */ }
 
+    private val requestLocationPermission =
+        registerForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { /* no-op — just no route distance/time on the job map without it */ }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         askForNotificationPermission()
+        askForLocationPermission()
         askToIgnoreBatteryOptimizations()
         val lastCrash = CrashHandler.readAndClearLastCrash(this)
         setContent {
@@ -59,6 +63,20 @@ class MainActivity : ComponentActivity() {
             PackageManager.PERMISSION_GRANTED
         if (!granted) {
             requestNotificationPermission.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+    }
+
+    // Powers the "trasa X km · Y min" route estimate on the job map header —
+    // without it, the map still shows, just without a live distance/time.
+    private fun askForLocationPermission() {
+        val fineGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+        val coarseGranted = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) ==
+            PackageManager.PERMISSION_GRANTED
+        if (!fineGranted && !coarseGranted) {
+            requestLocationPermission.launch(
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION),
+            )
         }
     }
 

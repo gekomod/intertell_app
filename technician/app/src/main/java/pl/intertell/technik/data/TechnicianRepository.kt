@@ -9,7 +9,7 @@ package pl.intertell.technik.data
  */
 interface TechnicianRepository {
     /** Throws [ApiException] on failure (bad credentials, network error, ...). */
-    suspend fun login(email: String, password: String): TeamMember
+    suspend fun login(code: String, password: String): LoginResult
     suspend fun logout()
 
     suspend fun getTasks(): List<Job>

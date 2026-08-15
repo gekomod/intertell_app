@@ -38,9 +38,12 @@ fun JobDetailScreen(viewModel: TechnicianViewModel) {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(20.dp),
+            .verticalScroll(rememberScrollState()),
     ) {
+        if (j.address.isNotBlank()) {
+            AddressMapPreview(address = j.address, viewModel = viewModel, height = 210.dp, rounded = false, showRoute = true)
+        }
+        Column(modifier = Modifier.padding(20.dp)) {
         BackLink("← Zlecenia", onClick = viewModel::goJobs)
         Row(
             modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
@@ -90,10 +93,6 @@ fun JobDetailScreen(viewModel: TechnicianViewModel) {
             }
         }
 
-        if (j.address.isNotBlank()) {
-            AddressMapPreview(address = j.address, viewModel = viewModel, modifier = Modifier.padding(top = 14.dp))
-        }
-
         if (j.kind == JobKind.MESSAGE && j.customerNo.isNotBlank()) {
             OutlineButton(
                 "Karta klienta i panel ONT",
@@ -130,6 +129,7 @@ fun JobDetailScreen(viewModel: TechnicianViewModel) {
                 enabled = !state.actionInFlight,
                 modifier = Modifier.padding(top = 18.dp),
             )
+        }
         }
     }
 }

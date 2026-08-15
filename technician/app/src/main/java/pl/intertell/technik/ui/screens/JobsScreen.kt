@@ -1,5 +1,7 @@
 package pl.intertell.technik.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -15,6 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -26,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import pl.intertell.technik.TechnicianViewModel
@@ -33,14 +37,22 @@ import pl.intertell.technik.data.JobKind
 import pl.intertell.technik.ui.components.Card
 import pl.intertell.technik.ui.theme.IntertellColors
 import pl.intertell.technik.ui.theme.IntertellType
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 private const val AUTO_REFRESH_INTERVAL_MS = 20_000L
 
+private val todayLabel: String
+    get() = SimpleDateFormat("EEEE, dd.MM.yyyy", Locale("pl", "PL")).format(Date())
+
 @Composable
 fun JobsScreen(viewModel: TechnicianViewModel) {
+    val context = LocalContext.current
     val state by viewModel.uiState.collectAsState()
     val jobs by viewModel.jobs.collectAsState()
     val me by viewModel.me.collectAsState()
+    val officePhone by viewModel.officePhone.collectAsState()
     val open = jobs.count { it.status != "done" }
     val urgentCount = jobs.count { it.isUrgent }
 
@@ -65,13 +77,26 @@ fun JobsScreen(viewModel: TechnicianViewModel) {
             Column {
                 Text("Zlecenia", style = IntertellType.display, color = IntertellColors.TextPrimary)
                 Text(
-                    me?.let { "${it.name} · ${it.specialization}" } ?: "",
+                    me?.let { "$todayLabel · ${it.code}" } ?: "",
                     style = IntertellType.mono,
                     color = IntertellColors.Text5,
                     modifier = Modifier.padding(top = 5.dp),
                 )
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                if (officePhone.isNotBlank()) {
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(9.dp))
+                            .clickable {
+                                context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:$officePhone")))
+                            }
+                            .background(IntertellColors.Navy)
+                            .padding(9.dp),
+                    ) {
+                        Icon(Icons.Default.Call, contentDescription = "Zadzwoń do biura", tint = IntertellColors.White, modifier = Modifier.size(16.dp))
+                    }
+                }
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(9.dp))

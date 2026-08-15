@@ -1,6 +1,11 @@
 package pl.intertell.technik
 
+import android.Manifest
 import android.app.Application
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.LocationManager
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
@@ -19,6 +24,8 @@ import pl.intertell.technik.data.TechnicianRepository
 import pl.intertell.technik.data.api.ApiTechnicianRepository
 import pl.intertell.technik.data.geo.LatLng
 import pl.intertell.technik.data.geo.NominatimGeocoder
+import pl.intertell.technik.data.geo.OsrmRouter
+import pl.intertell.technik.data.geo.RouteInfo
 
 class TechnicianViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -30,6 +37,9 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
 
     private val _me = MutableStateFlow<TeamMember?>(null)
     val me: StateFlow<TeamMember?> = _me.asStateFlow()
+
+    private val _officePhone = MutableStateFlow("")
+    val officePhone: StateFlow<String> = _officePhone.asStateFlow()
 
     private val _jobs = MutableStateFlow<List<Job>>(emptyList())
     val jobs: StateFlow<List<Job>> = _jobs.asStateFlow()
@@ -50,6 +60,10 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
     private val _geocodeCache = MutableStateFlow<Map<String, LatLng?>>(emptyMap())
     val geocodeCache: StateFlow<Map<String, LatLng?>> = _geocodeCache.asStateFlow()
 
+    /** address -> driving route from the technician's current position, or null if unavailable (no fix/permission/API error). */
+    private val _routeCache = MutableStateFlow<Map<String, RouteInfo?>>(emptyMap())
+    val routeCache: StateFlow<Map<String, RouteInfo?>> = _routeCache.asStateFlow()
+
     private var searchJob: CoroutineJob? = null
 
     init {
@@ -65,13 +79,14 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
-    fun login(email: String, password: String) {
+    fun login(code: String, password: String) {
         if (_uiState.value.loginLoading) return
         viewModelScope.launch {
             _uiState.update { it.copy(loginLoading = true, loginError = null) }
             try {
-                val tech = repository.login(email, password)
-                _me.value = tech
+                val result = repository.login(code, password)
+                _me.value = result.technician
+                _officePhone.value = result.officePhone
                 _uiState.update { it.copy(loginLoading = false, screen = TechScreen.JOBS) }
                 refreshTasks()
             } catch (e: CancellationException) {
@@ -85,6 +100,7 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
     fun logout() {
         viewModelScope.launch { repository.logout() }
         _me.value = null
+        _officePhone.value = ""
         _jobs.value = emptyList()
         _team.value = emptyList()
         _selectedJob.value = null
@@ -108,6 +124,33 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             val result = runCatching { NominatimGeocoder.geocode(address) }.getOrNull()
             _geocodeCache.update { it + (address to result) }
+        }
+    }
+
+    /** Needs both a resolved geocode for [address] and a location permission grant with a recent fix — silently no-ops otherwise. */
+    fun computeRoute(address: String) {
+        if (_routeCache.value.containsKey(address)) return
+        val destination = _geocodeCache.value[address] ?: return
+        val origin = lastKnownLocation() ?: return
+        viewModelScope.launch {
+            val result = runCatching { OsrmRouter.route(origin, destination) }.getOrNull()
+            _routeCache.update { it + (address to result) }
+        }
+    }
+
+    private fun lastKnownLocation(): LatLng? {
+        val context = getApplication<Application>()
+        val hasPermission = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+        if (!hasPermission) return null
+        val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return null
+        return try {
+            locationManager.getProviders(true)
+                .mapNotNull { locationManager.getLastKnownLocation(it) }
+                .maxByOrNull { it.time }
+                ?.let { LatLng(it.latitude, it.longitude) }
+        } catch (e: SecurityException) {
+            null
         }
     }
 

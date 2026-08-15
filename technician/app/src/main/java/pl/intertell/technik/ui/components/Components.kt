@@ -163,6 +163,7 @@ fun LabeledTextField(
     modifier: Modifier = Modifier,
     isPassword: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Text,
+    placeholder: String? = null,
 ) {
     Column(
         modifier = modifier
@@ -183,6 +184,12 @@ fun LabeledTextField(
                 keyboardType = if (isPassword) KeyboardType.Password else keyboardType,
                 capitalization = KeyboardCapitalization.None,
             ),
+            decorationBox = { inner ->
+                if (value.isEmpty() && placeholder != null) {
+                    Text(placeholder, style = IntertellType.titleBold, color = IntertellColors.Text45)
+                }
+                inner()
+            },
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(top = 4.dp),
