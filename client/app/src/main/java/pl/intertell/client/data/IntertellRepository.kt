@@ -22,7 +22,13 @@ interface IntertellRepository {
 
     suspend fun getPlans(): List<Plan>
 
-    suspend fun createTicket(subject: String, message: String, category: String, priority: String)
+    /**
+     * Reports a problem straight into the technician-assignable queue (the
+     * same one the public site's contact form feeds) — an admin can assign
+     * it to a technician on /admin/wiadomosci, and it then shows up in the
+     * technician app's own task list with address and map.
+     */
+    suspend fun reportProblem(subject: String, message: String, phone: String)
 }
 
 class ApiException(message: String, val httpStatus: Int = 0) : Exception(message)

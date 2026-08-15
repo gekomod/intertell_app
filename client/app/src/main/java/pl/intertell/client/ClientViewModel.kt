@@ -229,16 +229,15 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
         it.copy(resetInProgress = false, resetSheetOpen = false, screen = ClientScreen.SETTINGS)
     }
 
-    fun reportProblem() {
+    fun reportProblem(subject: String, message: String, phone: String) {
+        if (subject.isBlank()) {
+            _uiState.update { it.copy(errorMessage = "Podaj temat zgłoszenia.") }
+            return
+        }
         viewModelScope.launch {
             _uiState.update { it.copy(actionInFlight = true, errorMessage = null) }
             try {
-                repository.createTicket(
-                    subject = "Zgłoszenie z aplikacji mobilnej",
-                    message = "Klient zgłosił problem z usługą z poziomu aplikacji mobilnej.",
-                    category = "Zgłoszenie z aplikacji",
-                    priority = "medium",
-                )
+                repository.reportProblem(subject, message, phone)
                 _uiState.update { it.copy(ticketSent = true) }
             } catch (e: CancellationException) {
                 throw e

@@ -19,14 +19,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import pl.intertell.client.ClientUiState
 import pl.intertell.client.ClientViewModel
 import pl.intertell.client.ui.components.BackLink
 import pl.intertell.client.ui.components.Card
+import pl.intertell.client.ui.components.LabeledTextField
 import pl.intertell.client.ui.components.OutlineButton
 import pl.intertell.client.ui.components.SolidButton
 import pl.intertell.client.ui.theme.IntertellColors
@@ -36,6 +41,9 @@ import pl.intertell.client.ui.theme.IntertellType
 fun ContactScreen(viewModel: ClientViewModel, state: ClientUiState) {
     val context = LocalContext.current
     val account by viewModel.account.collectAsState()
+    var subject by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf("") }
+    var phone by remember { mutableStateOf("") }
 
     Column(
         modifier = Modifier
@@ -58,11 +66,37 @@ fun ContactScreen(viewModel: ClientViewModel, state: ClientUiState) {
             )
         }
 
+        Column(modifier = Modifier.padding(top = 14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            LabeledTextField(label = "Temat", value = subject, onValueChange = { subject = it })
+            LabeledTextField(
+                label = "Opis problemu",
+                value = message,
+                onValueChange = { message = it },
+                singleLine = false,
+                minLines = 3,
+            )
+            LabeledTextField(
+                label = "Telefon do kontaktu (opcjonalnie)",
+                value = phone,
+                onValueChange = { phone = it },
+                keyboardType = KeyboardType.Phone,
+            )
+        }
+
+        if (state.errorMessage != null) {
+            Text(
+                state.errorMessage,
+                style = IntertellType.bodySmall,
+                color = IntertellColors.Danger,
+                modifier = Modifier.padding(top = 10.dp),
+            )
+        }
+
         Row(modifier = Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             SolidButton(
                 if (state.actionInFlight) "Wysyłanie…" else "Zgłoś problem",
-                onClick = viewModel::reportProblem,
-                enabled = !state.actionInFlight,
+                onClick = { viewModel.reportProblem(subject, message, phone) },
+                enabled = !state.actionInFlight && subject.isNotBlank(),
                 modifier = Modifier.weight(1f),
                 height = 50,
             )

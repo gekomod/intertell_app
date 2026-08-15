@@ -164,6 +164,8 @@ fun LabeledTextField(
     modifier: Modifier = Modifier,
     isPassword: Boolean = false,
     keyboardType: KeyboardType = KeyboardType.Text,
+    singleLine: Boolean = true,
+    minLines: Int = 1,
 ) {
     Column(
         modifier = modifier
@@ -177,7 +179,8 @@ fun LabeledTextField(
         BasicTextField(
             value = value,
             onValueChange = onValueChange,
-            singleLine = true,
+            singleLine = singleLine,
+            minLines = minLines,
             textStyle = IntertellType.titleBold.copy(color = IntertellColors.TextPrimary),
             visualTransformation = if (isPassword) PasswordVisualTransformation() else VisualTransformation.None,
             keyboardOptions = KeyboardOptions(

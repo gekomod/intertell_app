@@ -73,10 +73,10 @@ class ApiIntertellRepository(context: Context) : IntertellRepository {
         return plans.map { it.toPlan(currentPriceCents) }
     }
 
-    override suspend fun createTicket(subject: String, message: String, category: String, priority: String) {
+    override suspend fun reportProblem(subject: String, message: String, phone: String) {
         api.post(
             "/api/client/tickets",
-            JSONObject().put("subject", subject).put("message", message).put("category", category).put("priority", priority),
+            JSONObject().put("subject", subject).put("message", message).put("phone", phone),
         )
     }
 }
