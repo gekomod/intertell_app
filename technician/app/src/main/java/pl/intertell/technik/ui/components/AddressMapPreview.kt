@@ -1,14 +1,14 @@
 package pl.intertell.technik.ui.components
 
-import android.annotation.SuppressLint
 import android.net.Uri
-import android.webkit.WebView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -18,13 +18,20 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
+import coil.compose.AsyncImage
 import pl.intertell.technik.TechnicianViewModel
 import pl.intertell.technik.data.geo.LatLng
 import pl.intertell.technik.ui.theme.IntertellColors
 import pl.intertell.technik.ui.theme.IntertellType
 import java.util.Locale
+import kotlin.math.PI
+import kotlin.math.cos
+import kotlin.math.floor
+import kotlin.math.ln
+import kotlin.math.tan
 
 /**
  * Map preview for a job/customer address. The server resolves and sends
@@ -35,15 +42,20 @@ import java.util.Locale
  * phone (see internal/geo/geocode.go's doc comment). Falls back to an
  * on-device Nominatim lookup only when the server didn't supply one.
  *
- * Rendered via openstreetmap.org's own official embeddable map (the same
- * widget behind its "Share > Embed" feature) rather than a third-party
- * static-map compositor.
+ * Rendered as a single official OSM raster tile (tile.openstreetmap.org) —
+ * a plain image fetch, not an embedded webpage. An embedded openstreetmap.org
+ * page in a WebView (the previous approach) rendered as a blank box on at
+ * least one real device; a static tile has far fewer ways to fail (no
+ * JavaScript, no page/CSS/Leaflet loading, just one PNG). It isn't pixel-
+ * centered on the pin — the marker shown is the box's visual center, which
+ * is "the tile containing the address," accurate to within the tile's
+ * ground size — a deliberate precision-for-reliability trade for what's
+ * only ever a rough visual aid; turn-by-turn still goes through "Nawiguj".
  *
  * With [showRoute], also overlays a "mapa · trasa X km · Y min" caption —
  * matching the original design's job-detail header — computed from the
  * technician's live location via OSRM, when location permission is granted.
  */
-@SuppressLint("SetJavaScriptEnabled")
 @Composable
 fun AddressMapPreview(
     address: String,
@@ -82,18 +94,21 @@ fun AddressMapPreview(
     ) {
         when {
             latLng != null -> {
-                val delta = 0.006
-                val bbox = "${latLng.lon - delta},${latLng.lat - delta},${latLng.lon + delta},${latLng.lat + delta}"
-                val url = "https://www.openstreetmap.org/export/embed.html?bbox=$bbox&marker=${latLng.lat},${latLng.lon}"
-                AndroidView(
+                val zoom = 17
+                val tileX = lonToTileX(latLng.lon, zoom)
+                val tileY = latToTileY(latLng.lat, zoom)
+                AsyncImage(
+                    model = "https://tile.openstreetmap.org/$zoom/$tileX/$tileY.png",
+                    contentDescription = "Mapa: $address",
                     modifier = Modifier.fillMaxWidth().height(height),
-                    factory = { ctx ->
-                        WebView(ctx).apply {
-                            settings.javaScriptEnabled = true
-                            loadUrl(url)
-                        }
-                    },
-                    update = { it.loadUrl(url) },
+                    contentScale = ContentScale.Crop,
+                )
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(IntertellColors.Danger),
                 )
             }
             geocodeCache.containsKey(address) -> {
@@ -140,8 +155,16 @@ fun AddressMapPreview(
                 } else {
                     "mapa"
                 }
-                Text(label, style = IntertellType.monoSmall, color = IntertellColors.White)
+                Text(label, style = IntertellType.monoSmall, color = Color.White)
             }
         }
     }
+}
+
+private fun lonToTileX(lon: Double, zoom: Int): Int =
+    floor((lon + 180.0) / 360.0 * (1 shl zoom)).toInt()
+
+private fun latToTileY(lat: Double, zoom: Int): Int {
+    val latRad = Math.toRadians(lat)
+    return floor((1.0 - ln(tan(latRad) + 1.0 / cos(latRad)) / PI) / 2.0 * (1 shl zoom)).toInt()
 }
