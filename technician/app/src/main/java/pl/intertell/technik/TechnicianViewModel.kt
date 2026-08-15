@@ -26,6 +26,8 @@ import pl.intertell.technik.data.geo.LatLng
 import pl.intertell.technik.data.geo.NominatimGeocoder
 import pl.intertell.technik.data.geo.OsrmRouter
 import pl.intertell.technik.data.geo.RouteInfo
+import pl.intertell.technik.update.UpdateChecker
+import pl.intertell.technik.update.UpdateInfo
 
 class TechnicianViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -64,12 +66,22 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
     private val _routeCache = MutableStateFlow<Map<String, RouteInfo?>>(emptyMap())
     val routeCache: StateFlow<Map<String, RouteInfo?>> = _routeCache.asStateFlow()
 
+    private val _updateAvailable = MutableStateFlow<UpdateInfo?>(null)
+    val updateAvailable: StateFlow<UpdateInfo?> = _updateAvailable.asStateFlow()
+
     private var searchJob: CoroutineJob? = null
 
     init {
         viewModelScope.launch {
             _uiState.update { it.copy(serverUrl = apiRepository.serverConfig.getBaseUrl()) }
         }
+        viewModelScope.launch {
+            _updateAvailable.value = runCatching { UpdateChecker.checkForUpdate(BuildConfig.BUILD_NUMBER) }.getOrNull()
+        }
+    }
+
+    fun dismissUpdate() {
+        _updateAvailable.value = null
     }
 
     fun setServerUrl(url: String) {
