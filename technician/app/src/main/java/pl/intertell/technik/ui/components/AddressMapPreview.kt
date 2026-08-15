@@ -1,9 +1,11 @@
 package pl.intertell.technik.ui.components
 
 import android.annotation.SuppressLint
+import android.net.Uri
 import android.webkit.WebView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -53,6 +55,7 @@ fun AddressMapPreview(
     knownLocation: LatLng? = null,
 ) {
     if (address.isBlank()) return
+    val uiState by viewModel.uiState.collectAsState()
     val geocodeCache by viewModel.geocodeCache.collectAsState()
     LaunchedEffect(address, knownLocation) {
         if (knownLocation != null) {
@@ -93,11 +96,28 @@ fun AddressMapPreview(
                     update = { it.loadUrl(url) },
                 )
             }
-            geocodeCache.containsKey(address) -> Text(
-                "Nie udało się ustalić lokalizacji na mapie.",
-                style = IntertellType.bodySmall,
-                color = IntertellColors.Text45,
-            )
+            geocodeCache.containsKey(address) -> {
+                val debugUrl = "${uiState.serverUrl}/debug/geocode?address=${Uri.encode(address)}"
+                Column(modifier = Modifier.fillMaxWidth().padding(12.dp)) {
+                    Text(
+                        "Nie udało się ustalić lokalizacji na mapie.",
+                        style = IntertellType.bodySmall,
+                        color = IntertellColors.Text45,
+                    )
+                    Text(
+                        "Adres: $address",
+                        style = IntertellType.monoSmall,
+                        color = IntertellColors.Text45,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                    Text(
+                        "Sprawdź: $debugUrl",
+                        style = IntertellType.monoSmall,
+                        color = IntertellColors.Text45,
+                        modifier = Modifier.padding(top = 4.dp),
+                    )
+                }
+            }
             else -> Text(
                 "Ładowanie mapy…",
                 style = IntertellType.bodySmall,
