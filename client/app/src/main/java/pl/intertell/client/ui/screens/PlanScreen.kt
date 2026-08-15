@@ -14,8 +14,11 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,8 +32,8 @@ import pl.intertell.client.ui.theme.IntertellType
 
 @Composable
 fun PlanScreen(viewModel: ClientViewModel, state: ClientUiState) {
-    val plans = viewModel.plans
-    val current = plans.first { it.direction == PlanDirection.CURRENT }
+    val plans by viewModel.plans.collectAsState()
+    val current = plans.firstOrNull { it.direction == PlanDirection.CURRENT }
 
     Column(
         modifier = Modifier
@@ -41,42 +44,46 @@ fun PlanScreen(viewModel: ClientViewModel, state: ClientUiState) {
     ) {
         Text("Pakiet", style = IntertellType.display, color = IntertellColors.TextPrimary)
 
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 16.dp)
-                .clip(RoundedCornerShape(20.dp))
-                .background(IntertellColors.White)
-                .border(1.5.dp, IntertellColors.Accent, RoundedCornerShape(20.dp))
-                .padding(20.dp),
-        ) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column {
-                    Text("PAKIET AKTUALNY", style = IntertellType.label, color = IntertellColors.Accent)
-                    Text(current.name, style = IntertellType.headline, color = IntertellColors.TextPrimary, modifier = Modifier.padding(top = 6.dp))
-                    Text(
-                        "${current.speedLabel} · router Wi-Fi 6 w cenie",
-                        style = IntertellType.body,
-                        color = IntertellColors.Text55,
-                        modifier = Modifier.padding(top = 3.dp),
-                    )
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(current.priceLabel, style = IntertellType.headline, color = IntertellColors.TextPrimary)
-                    Text("/ mies.", style = IntertellType.label, color = IntertellColors.Text50)
-                }
+        if (state.plansLoading && plans.isEmpty()) {
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 24.dp), horizontalArrangement = Arrangement.Center) {
+                CircularProgressIndicator(color = IntertellColors.Accent)
             }
-            Box(modifier = Modifier.fillMaxWidth().padding(top = 16.dp, bottom = 14.dp).background(IntertellColors.HairlineOnLightSoft).height(1.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("Aktywny od 12.03.2024", style = IntertellType.bodySmall, color = IntertellColors.Text55)
-                Text("Zmiana od 01.09.2026", style = IntertellType.bodySmall, color = IntertellColors.Text55)
+            return
+        }
+
+        if (current != null) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 16.dp)
+                    .clip(RoundedCornerShape(20.dp))
+                    .background(IntertellColors.White)
+                    .border(1.5.dp, IntertellColors.Accent, RoundedCornerShape(20.dp))
+                    .padding(20.dp),
+            ) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Column {
+                        Text("PAKIET AKTUALNY", style = IntertellType.label, color = IntertellColors.Accent)
+                        Text(current.name, style = IntertellType.headline, color = IntertellColors.TextPrimary, modifier = Modifier.padding(top = 6.dp))
+                        Text(
+                            "${current.speedLabel} · router Wi-Fi 6 w cenie",
+                            style = IntertellType.body,
+                            color = IntertellColors.Text55,
+                            modifier = Modifier.padding(top = 3.dp),
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(current.priceLabel, style = IntertellType.headline, color = IntertellColors.TextPrimary)
+                        Text("/ mies.", style = IntertellType.label, color = IntertellColors.Text50)
+                    }
+                }
             }
         }
 
         Text("Dostępne pakiety", style = IntertellType.bodyBold, color = IntertellColors.TextPrimary, modifier = Modifier.padding(top = 22.dp, bottom = 12.dp))
 
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            plans.forEachIndexed { index, plan ->
+            plans.forEach { plan ->
                 val badgeColor = when (plan.direction) {
                     PlanDirection.CURRENT -> IntertellColors.Accent
                     PlanDirection.HIGHER -> IntertellColors.Green
@@ -85,7 +92,7 @@ fun PlanScreen(viewModel: ClientViewModel, state: ClientUiState) {
                 Card(
                     radius = 18,
                     padding = 18,
-                    modifier = Modifier.clickable(enabled = plan.direction != PlanDirection.CURRENT) { viewModel.openPlanSheet(index) },
+                    modifier = Modifier.clickable(enabled = plan.direction != PlanDirection.CURRENT) { viewModel.openPlanSheet(plan.id) },
                 ) {
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                         Column {

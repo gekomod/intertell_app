@@ -13,21 +13,26 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
+import pl.intertell.client.ClientUiState
 import pl.intertell.client.ClientViewModel
 import pl.intertell.client.ui.components.Card
 import pl.intertell.client.ui.theme.IntertellColors
 import pl.intertell.client.ui.theme.IntertellType
 
 @Composable
-fun InvoicesScreen(viewModel: ClientViewModel) {
-    val invoices = viewModel.invoices
-    val balance = invoices.firstOrNull { !it.paid }
+fun InvoicesScreen(viewModel: ClientViewModel, state: ClientUiState) {
+    val invoices by viewModel.invoices.collectAsState()
+    val unpaid = invoices.filter { !it.paid }
+    val balanceLabel = if (unpaid.isEmpty()) "0,00 zł" else unpaid.first().amountZl + " zł"
 
     Column(
         modifier = Modifier
@@ -42,7 +47,7 @@ fun InvoicesScreen(viewModel: ClientViewModel) {
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 Column {
                     Text("Saldo do zapłaty", style = IntertellType.bodySmall, color = IntertellColors.White.copy(alpha = 0.55f))
-                    Text(balance?.amountLabel ?: "0,00 zł", style = IntertellType.headline, color = IntertellColors.White, modifier = Modifier.padding(top = 3.dp))
+                    Text(balanceLabel, style = IntertellType.headline, color = IntertellColors.White, modifier = Modifier.padding(top = 3.dp))
                 }
                 Box(
                     modifier = Modifier
@@ -57,22 +62,35 @@ fun InvoicesScreen(viewModel: ClientViewModel) {
             }
         }
 
-        Column(modifier = Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            invoices.forEachIndexed { index, invoice ->
-                Card(radius = 16, padding = 16, modifier = Modifier.clickable { viewModel.openInvoice(index) }) {
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Column {
-                            Text(invoice.period, style = IntertellType.titleBold, color = IntertellColors.TextPrimary)
-                            Text(invoice.id, style = IntertellType.mono, color = IntertellColors.Text45, modifier = Modifier.padding(top = 4.dp))
-                        }
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(invoice.amountLabel, style = IntertellType.titleBold, color = IntertellColors.TextPrimary)
-                            Text(
-                                invoice.statusLabel,
-                                style = IntertellType.chip,
-                                color = if (invoice.paid) IntertellColors.Green else IntertellColors.Amber,
-                                modifier = Modifier.padding(top = 4.dp),
-                            )
+        if (state.invoicesLoading && invoices.isEmpty()) {
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 24.dp), horizontalArrangement = Arrangement.Center) {
+                CircularProgressIndicator(color = IntertellColors.Accent)
+            }
+        } else if (invoices.isEmpty()) {
+            Text(
+                "Brak faktur.",
+                style = IntertellType.body,
+                color = IntertellColors.Text50,
+                modifier = Modifier.padding(top = 24.dp),
+            )
+        } else {
+            Column(modifier = Modifier.padding(top = 16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                invoices.forEach { invoice ->
+                    Card(radius = 16, padding = 16, modifier = Modifier.clickable { viewModel.openInvoice(invoice.id) }) {
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Column {
+                                Text(invoice.issuedOn, style = IntertellType.titleBold, color = IntertellColors.TextPrimary)
+                                Text(invoice.number, style = IntertellType.mono, color = IntertellColors.Text45, modifier = Modifier.padding(top = 4.dp))
+                            }
+                            Column(horizontalAlignment = Alignment.End) {
+                                Text(invoice.amountZl + " zł", style = IntertellType.titleBold, color = IntertellColors.TextPrimary)
+                                Text(
+                                    invoice.statusLabel,
+                                    style = IntertellType.chip,
+                                    color = if (invoice.paid) IntertellColors.Green else IntertellColors.Amber,
+                                    modifier = Modifier.padding(top = 4.dp),
+                                )
+                            }
                         }
                     }
                 }

@@ -15,23 +15,36 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import pl.intertell.client.ClientUiState
 import pl.intertell.client.ClientViewModel
 import pl.intertell.client.ui.components.Card
 import pl.intertell.client.ui.theme.IntertellColors
 import pl.intertell.client.ui.theme.IntertellType
 
 @Composable
-fun HomeScreen(viewModel: ClientViewModel) {
-    val account = viewModel.account
-    val status = viewModel.serviceStatus
-    val invoice = viewModel.invoices.first()
+fun HomeScreen(viewModel: ClientViewModel, state: ClientUiState) {
+    val account by viewModel.account.collectAsState()
+    val status by viewModel.serviceStatus.collectAsState()
+    val invoices by viewModel.invoices.collectAsState()
+    val unpaid = invoices.firstOrNull { !it.paid }
+
+    if (state.homeLoading && account == null) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = IntertellColors.Accent)
+        }
+        return
+    }
+    val acc = account ?: return
 
     Column(
         modifier = Modifier
@@ -42,9 +55,9 @@ fun HomeScreen(viewModel: ClientViewModel) {
     ) {
         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Column {
-                Text("Cześć, ${account.fullName.substringBefore(' ')}", style = IntertellType.display, color = IntertellColors.TextPrimary)
+                Text("Cześć, ${acc.fullName.substringBefore(' ')}", style = IntertellType.display, color = IntertellColors.TextPrimary)
                 Text(
-                    "umowa ${account.contractNumber} · ${account.city}",
+                    "umowa ${acc.contractNumber} · ${acc.city}",
                     style = IntertellType.mono,
                     color = IntertellColors.Text50,
                     modifier = Modifier.padding(top = 5.dp),
@@ -57,77 +70,83 @@ fun HomeScreen(viewModel: ClientViewModel) {
                     .background(IntertellColors.Navy),
                 contentAlignment = Alignment.Center,
             ) {
-                Text(account.initials, style = IntertellType.titleBold, color = IntertellColors.White)
+                Text(acc.initials, style = IntertellType.titleBold, color = IntertellColors.White)
             }
         }
 
-        Card(background = IntertellColors.Navy, border = null, modifier = Modifier.padding(top = 20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(IntertellColors.GreenLightDot))
-                Text(
-                    "Usługa aktywna",
-                    style = IntertellType.bodyBold,
-                    color = IntertellColors.GreenLightDot,
-                    modifier = Modifier.padding(start = 8.dp),
-                )
-            }
-            Text(status.planName, style = IntertellType.headline, color = IntertellColors.White, modifier = Modifier.padding(top = 12.dp))
-            Row(modifier = Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(22.dp)) {
-                MetricColumn("POBIERANIE", "${status.downloadMbps} Mb/s")
-                MetricColumn("WYSYŁANIE", "${status.uploadMbps} Mb/s")
-                MetricColumn("ONT", if (status.ontOnline) "online" else "offline")
-            }
-            Row(modifier = Modifier.padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                HomeActionPill("Test prędkości", Modifier.weight(1f))
-                HomeActionPill("Zgłoś awarię", Modifier.weight(1f), onClick = viewModel::goContact)
+        if (status != null) {
+            val s = status!!
+            Card(background = IntertellColors.Navy, border = null, modifier = Modifier.padding(top = 20.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(IntertellColors.GreenLightDot))
+                    Text(
+                        "Usługa aktywna",
+                        style = IntertellType.bodyBold,
+                        color = IntertellColors.GreenLightDot,
+                        modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
+                Text(s.planName, style = IntertellType.headline, color = IntertellColors.White, modifier = Modifier.padding(top = 12.dp))
+                Row(modifier = Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(22.dp)) {
+                    MetricColumn("PRĘDKOŚĆ", s.speedLabel.ifBlank { "—" })
+                    MetricColumn("ŁĄCZE", connectionLabel(s.connectionUp))
+                    s.routerUptimeDays?.let { MetricColumn("ROUTER", "$it dni") }
+                }
+                Row(modifier = Modifier.padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    HomeActionPill("Test prędkości", Modifier.weight(1f))
+                    HomeActionPill("Zgłoś awarię", Modifier.weight(1f), onClick = viewModel::goContact)
+                }
             }
         }
 
         Card(modifier = Modifier.padding(top = 14.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Column {
-                    Text("Do zapłaty do ${invoice.dueDate}", style = IntertellType.bodySmall, color = IntertellColors.Text55)
-                    Text(invoice.amountLabel, style = IntertellType.headline, color = IntertellColors.TextPrimary, modifier = Modifier.padding(top = 4.dp))
+            if (unpaid != null) {
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Column {
+                        Text("Do zapłaty do ${unpaid.dueOn}", style = IntertellType.bodySmall, color = IntertellColors.Text55)
+                        Text(unpaid.amountZl + " zł", style = IntertellType.headline, color = IntertellColors.TextPrimary, modifier = Modifier.padding(top = 4.dp))
+                    }
+                    Box(
+                        modifier = Modifier
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(IntertellColors.Accent)
+                            .clickable(onClick = viewModel::goInvoices)
+                            .padding(horizontal = 20.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text("Zapłać", style = IntertellType.bodyBold, color = IntertellColors.White)
+                    }
                 }
-                Box(
-                    modifier = Modifier
-                        .height(44.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(IntertellColors.Accent)
-                        .clickable(onClick = viewModel::goInvoices)
-                        .padding(horizontal = 20.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text("Zapłać", style = IntertellType.bodyBold, color = IntertellColors.White)
+                Column(modifier = Modifier.padding(top = 14.dp)) {
+                    Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(IntertellColors.HairlineOnLightSoft))
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                    ) {
+                        Text("BLIK · karta · przelew", style = IntertellType.bodyBold, color = IntertellColors.Text55)
+                        Text("Faktura ${unpaid.number}", style = IntertellType.bodyBold, color = IntertellColors.Text55)
+                    }
                 }
-            }
-            Column(modifier = Modifier.padding(top = 14.dp)) {
-                Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(IntertellColors.HairlineOnLightSoft))
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(top = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
-                    Text("BLIK · karta · przelew", style = IntertellType.bodyBold, color = IntertellColors.Text55)
-                    Text("Faktura ${invoice.id}", style = IntertellType.bodyBold, color = IntertellColors.Text55)
+            } else {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(IntertellColors.Green))
+                    Text("Brak zaległości płatniczych", style = IntertellType.bodyBold, color = IntertellColors.TextPrimary)
                 }
             }
         }
 
         Row(modifier = Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            QuickTile("Zmień pakiet", "do 1000 Mb/s", IntertellColors.Accent, Modifier.weight(1f), viewModel::goPlan)
-            QuickTile("Umowy", "3 dokumenty", IntertellColors.Navy, Modifier.weight(1f), viewModel::goContracts)
-        }
-
-        Card(background = IntertellColors.AmberBannerBg, border = IntertellColors.AmberBannerBorder, radius = 16, modifier = Modifier.padding(top = 14.dp)) {
-            Text("Prace serwisowe w Twojej okolicy", style = IntertellType.bodyBold, color = IntertellColors.TextPrimary)
-            Text(
-                "18.08, 02:00–04:00 — możliwe krótkie przerwy w dostępie.",
-                style = IntertellType.bodySmall,
-                color = IntertellColors.Text55,
-                modifier = Modifier.padding(top = 4.dp),
-            )
+            QuickTile("Zmień pakiet", status?.planName ?: "", IntertellColors.Accent, Modifier.weight(1f), viewModel::goPlan)
+            QuickTile("Umowy", "dokumenty i regulaminy", IntertellColors.Navy, Modifier.weight(1f), viewModel::goContracts)
         }
     }
+}
+
+private fun connectionLabel(connectionUp: Boolean?): String = when (connectionUp) {
+    true -> "aktywne"
+    false -> "brak"
+    null -> "—"
 }
 
 @Composable

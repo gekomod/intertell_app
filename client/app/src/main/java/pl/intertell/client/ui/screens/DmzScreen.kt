@@ -1,6 +1,7 @@
 package pl.intertell.client.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
@@ -8,8 +9,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -25,6 +29,8 @@ import pl.intertell.client.ui.theme.IntertellType
 
 @Composable
 fun DmzScreen(viewModel: ClientViewModel, state: ClientUiState) {
+    val dmz by viewModel.dmz.collectAsState()
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -41,6 +47,14 @@ fun DmzScreen(viewModel: ClientViewModel, state: ClientUiState) {
             modifier = Modifier.padding(top = 6.dp),
         )
 
+        if (state.dmzLoading && dmz == null) {
+            Row(modifier = Modifier.fillMaxWidth().padding(top = 24.dp), horizontalArrangement = Arrangement.Center) {
+                CircularProgressIndicator(color = IntertellColors.Accent)
+            }
+            return
+        }
+        val d = dmz ?: return
+
         Card(modifier = Modifier.padding(top = 18.dp)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -48,12 +62,11 @@ fun DmzScreen(viewModel: ClientViewModel, state: ClientUiState) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text("DMZ włączona", style = IntertellType.titleBold, color = IntertellColors.TextPrimary)
-                ToggleSwitch(checked = state.dmzEnabled, onCheckedChange = { viewModel.toggleDmz() })
+                ToggleSwitch(checked = d.enabled, onCheckedChange = { viewModel.toggleDmz() })
             }
-            MonoLabelValue("Adres IP hosta w sieci lokalnej", "192.168.1.40", modifier = Modifier.padding(top = 16.dp))
-            Row(modifier = Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                MonoLabelValue("Urządzenie", "NVR-Kamery", valueStyle = IntertellType.bodyBold, modifier = Modifier.weight(1f))
-                MonoLabelValue("Adres publiczny", "89.64.12.7", modifier = Modifier.weight(1f))
+            MonoLabelValue("Adres IP hosta w sieci lokalnej", d.hostIp.ifBlank { "— nie skonfigurowano —" }, modifier = Modifier.padding(top = 16.dp))
+            if (d.publicIp.isNotBlank()) {
+                MonoLabelValue("Adres publiczny (WAN)", d.publicIp, modifier = Modifier.padding(top = 10.dp))
             }
         }
 
@@ -65,6 +78,6 @@ fun DmzScreen(viewModel: ClientViewModel, state: ClientUiState) {
             )
         }
 
-        SolidButton("Zapisz i zrestartuj router", onClick = viewModel::goSettings, height = 52, modifier = Modifier.padding(top = 16.dp))
+        SolidButton("Zapisz i wróć do konta", onClick = viewModel::goSettings, height = 52, modifier = Modifier.padding(top = 16.dp))
     }
 }

@@ -3,6 +3,11 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+// CI passes this as the GitHub Actions run number (matches the "build-N" release
+// tag), so the app can compare its own build number against the latest GitHub
+// release to detect and offer in-app updates. Defaults to 1 for local builds.
+val buildNumber = (project.findProperty("buildNumber") as String?)?.toIntOrNull() ?: 1
+
 android {
     namespace = "pl.intertell.client"
     compileSdk = 34
@@ -11,8 +16,9 @@ android {
         applicationId = "pl.intertell.client"
         minSdk = 26
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = buildNumber
+        versionName = "1.0.$buildNumber"
+        buildConfigField("int", "BUILD_NUMBER", "$buildNumber")
     }
 
     buildTypes {
@@ -32,6 +38,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 
     composeOptions {
@@ -48,6 +55,8 @@ android {
 dependencies {
     implementation("androidx.core:core-ktx:1.13.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1")
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4")

@@ -1,6 +1,7 @@
 package pl.intertell.client.ui.screens
 
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -30,8 +31,10 @@ import pl.intertell.client.ui.theme.IntertellType
 
 @Composable
 fun LoginScreen(viewModel: ClientViewModel, state: ClientUiState) {
-    var contractOrEmail by remember { mutableStateOf("88214/OST") }
+    var contractOrEmail by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var editingServer by remember { mutableStateOf(false) }
+    var serverDraft by remember(state.serverUrl) { mutableStateOf(state.serverUrl) }
 
     Column(
         modifier = Modifier
@@ -104,21 +107,43 @@ fun LoginScreen(viewModel: ClientViewModel, state: ClientUiState) {
             }
         }
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(top = 18.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text("Nie pamiętam hasła", style = IntertellType.bodyBold, color = IntertellColors.Text55)
-            Text("Aktywuj konto", style = IntertellType.bodyBold, color = IntertellColors.Text55)
+        if (!editingServer) {
+            Text(
+                "Serwer: ${state.serverUrl} · Zmień",
+                style = IntertellType.monoFootnote,
+                color = IntertellColors.Text42,
+                modifier = Modifier
+                    .padding(top = 22.dp)
+                    .clickable { editingServer = true },
+            )
+        } else {
+            Column(modifier = Modifier.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                LabeledTextField(label = "Adres serwera", value = serverDraft, onValueChange = { serverDraft = it })
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        "Zapisz",
+                        style = IntertellType.bodyBold,
+                        color = IntertellColors.Accent,
+                        modifier = Modifier.clickable {
+                            viewModel.setServerUrl(serverDraft)
+                            editingServer = false
+                        },
+                    )
+                    Text(
+                        "Anuluj",
+                        style = IntertellType.bodyBold,
+                        color = IntertellColors.Text55,
+                        modifier = Modifier.clickable { editingServer = false },
+                    )
+                }
+            }
         }
 
         Text(
             "Uwierzytelnianie i dane abonenta pochodzą z systemu LMS. Aplikacja nie przechowuje haseł.",
             style = IntertellType.monoFootnote,
             color = IntertellColors.Text42,
-            modifier = Modifier.padding(top = 40.dp),
+            modifier = Modifier.padding(top = 20.dp),
         )
     }
 }

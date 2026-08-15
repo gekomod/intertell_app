@@ -17,10 +17,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import pl.intertell.client.ClientUiState
 import pl.intertell.client.ClientViewModel
 import pl.intertell.client.ui.components.BackLink
 import pl.intertell.client.ui.components.Card
@@ -30,9 +33,9 @@ import pl.intertell.client.ui.theme.IntertellColors
 import pl.intertell.client.ui.theme.IntertellType
 
 @Composable
-fun ContactScreen(viewModel: ClientViewModel) {
+fun ContactScreen(viewModel: ClientViewModel, state: ClientUiState) {
     val context = LocalContext.current
-    val account = viewModel.account
+    val account by viewModel.account.collectAsState()
 
     Column(
         modifier = Modifier
@@ -46,9 +49,9 @@ fun ContactScreen(viewModel: ClientViewModel) {
 
         Card(background = IntertellColors.Navy, border = null, modifier = Modifier.padding(top = 16.dp)) {
             Text("Zgłoszenie techniczne", style = IntertellType.bodySmall, color = IntertellColors.White.copy(alpha = 0.55f))
-            Text("Twoja usługa działa poprawnie", style = IntertellType.headline, color = IntertellColors.White, modifier = Modifier.padding(top = 4.dp))
+            Text("Masz problem z usługą?", style = IntertellType.headline, color = IntertellColors.White, modifier = Modifier.padding(top = 4.dp))
             Text(
-                "Brak awarii w Twojej okolicy. Jeśli problem trwa, opisz go — technik zobaczy zgłoszenie razem z pomiarami z Twojego ONT.",
+                "Opisz go — zgłoszenie trafi bezpośrednio do kolejki serwisowej wraz z Twoim numerem klienta.",
                 style = IntertellType.bodySmall,
                 color = IntertellColors.White.copy(alpha = 0.6f),
                 modifier = Modifier.padding(top = 8.dp),
@@ -56,7 +59,13 @@ fun ContactScreen(viewModel: ClientViewModel) {
         }
 
         Row(modifier = Modifier.fillMaxWidth().padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            SolidButton("Zgłoś problem", onClick = {}, modifier = Modifier.weight(1f), height = 50)
+            SolidButton(
+                if (state.actionInFlight) "Wysyłanie…" else "Zgłoś problem",
+                onClick = viewModel::reportProblem,
+                enabled = !state.actionInFlight,
+                modifier = Modifier.weight(1f),
+                height = 50,
+            )
             OutlineButton("Czat z BOK", onClick = {}, modifier = Modifier.weight(1f), height = 50)
         }
 
@@ -81,7 +90,7 @@ fun ContactScreen(viewModel: ClientViewModel) {
         }
 
         Text(
-            "Zgłoszenia z aplikacji trafiają bezpośrednio do kolejki serwisowej w LMS wraz z numerem umowy ${account.contractNumber}.",
+            "Zgłoszenia z aplikacji trafiają bezpośrednio do kolejki serwisowej wraz z numerem klienta ${account?.contractNumber.orEmpty()}.",
             style = IntertellType.monoFootnote,
             color = IntertellColors.Text45,
             modifier = Modifier.padding(top = 14.dp),

@@ -8,41 +8,43 @@ data class Account(
     val city: String,
 )
 
+/** connectionUp/routerUptimeDays are null when unknown — not LMS-linked, LMS unreachable, or no router record yet. */
 data class ServiceStatus(
     val planName: String,
-    val downloadMbps: Int,
-    val uploadMbps: Int,
-    val ontOnline: Boolean,
-    val routerDaysSinceRestart: Int,
+    val speedLabel: String,
+    val connectionUp: Boolean?,
+    val routerUptimeDays: Int?,
 )
 
 data class Invoice(
-    val id: String,
-    val period: String,
-    val amountLabel: String,
-    val amountGrossZl: Double,
-    val dueDate: String,
-    val paid: Boolean,
+    val id: Long,
+    val number: String,
+    val issuedOn: String,
+    val dueOn: String,
+    val amountZl: String,
+    val status: String,
+    val statusLabel: String,
 ) {
-    val statusLabel: String get() = if (paid) "Zapłacona" else "Do zapłaty"
-    val routerLeaseZl: Double get() = 6.59
-    val subscriptionZl: Double get() = amountGrossZl - routerLeaseZl
+    val paid: Boolean get() = status == "paid"
 }
-
-data class ContractDocument(
-    val name: String,
-    val meta: String,
-)
 
 enum class PlanDirection { LOWER, CURRENT, HIGHER }
 
 data class Plan(
+    val id: Long,
     val name: String,
     val speedLabel: String,
     val priceLabel: String,
+    val priceCents: Long,
     val direction: PlanDirection,
     val badge: String,
     val deltaLabel: String,
 ) {
     val requiresRequest: Boolean get() = direction != PlanDirection.HIGHER
 }
+
+data class DmzSettings(
+    val enabled: Boolean,
+    val hostIp: String,
+    val publicIp: String,
+)

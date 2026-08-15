@@ -4,18 +4,25 @@ enum class ClientScreen { LOGIN, HOME, INVOICES, INVOICE, CONTRACTS, PLAN, SETTI
 
 data class ClientUiState(
     val screen: ClientScreen = ClientScreen.LOGIN,
+    val serverUrl: String = "",
     val loginLoading: Boolean = false,
     val loginError: String? = null,
-    val invoiceIndex: Int = 0,
-    val sheetPlanIndex: Int? = null,
+    val homeLoading: Boolean = false,
+    val invoicesLoading: Boolean = false,
+    val plansLoading: Boolean = false,
+    val dmzLoading: Boolean = false,
+    val actionInFlight: Boolean = false,
+    val errorMessage: String? = null,
+    val sheetPlanId: Long? = null,
     val planChangeDone: Boolean = false,
+    val resetSheetOpen: Boolean = false,
+    val resetInProgress: Boolean = false,
+    val ticketSent: Boolean = false,
+    // Local-only display preferences — there's no backend model for these yet.
     val eFakturaOnly: Boolean = true,
     val pushNotifications: Boolean = true,
     val smsAlerts: Boolean = false,
-    val dmzEnabled: Boolean = false,
-    val resetSheetOpen: Boolean = false,
-    val resetInProgress: Boolean = false,
 ) {
     val showBottomBar: Boolean get() = screen != ClientScreen.LOGIN
-    val showPlanSheet: Boolean get() = sheetPlanIndex != null && !planChangeDone
+    val showPlanSheet: Boolean get() = sheetPlanId != null && !planChangeDone
 }

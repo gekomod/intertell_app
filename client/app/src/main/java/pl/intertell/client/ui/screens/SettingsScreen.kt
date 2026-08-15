@@ -17,6 +17,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -31,8 +33,9 @@ import pl.intertell.client.ui.theme.IntertellType
 
 @Composable
 fun SettingsScreen(viewModel: ClientViewModel, state: ClientUiState) {
-    val account = viewModel.account
-    val status = viewModel.serviceStatus
+    val account by viewModel.account.collectAsState()
+    val status by viewModel.serviceStatus.collectAsState()
+    val dmz by viewModel.dmz.collectAsState()
 
     Column(
         modifier = Modifier
@@ -43,17 +46,19 @@ fun SettingsScreen(viewModel: ClientViewModel, state: ClientUiState) {
     ) {
         Text("Konto", style = IntertellType.display, color = IntertellColors.TextPrimary)
 
-        Card(modifier = Modifier.padding(top = 16.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Box(
-                    modifier = Modifier.size(48.dp).clip(CircleShape).background(IntertellColors.Navy),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(account.initials, style = IntertellType.titleBold, color = IntertellColors.White)
-                }
-                Column {
-                    Text(account.fullName, style = IntertellType.titleBold, color = IntertellColors.TextPrimary)
-                    Text(account.email, style = IntertellType.mono, color = IntertellColors.Text50, modifier = Modifier.padding(top = 3.dp))
+        if (account != null) {
+            Card(modifier = Modifier.padding(top = 16.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    Box(
+                        modifier = Modifier.size(48.dp).clip(CircleShape).background(IntertellColors.Navy),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(account!!.initials, style = IntertellType.titleBold, color = IntertellColors.White)
+                    }
+                    Column {
+                        Text(account!!.fullName, style = IntertellType.titleBold, color = IntertellColors.TextPrimary)
+                        Text(account!!.email, style = IntertellType.mono, color = IntertellColors.Text50, modifier = Modifier.padding(top = 3.dp))
+                    }
                 }
             }
         }
@@ -105,19 +110,25 @@ fun SettingsScreen(viewModel: ClientViewModel, state: ClientUiState) {
                 Column {
                     Text("Status działania", style = IntertellType.titleBold, color = IntertellColors.TextPrimary)
                     Text(
-                        "ONT ${if (status.ontOnline) "online" else "offline"} · router ${status.routerDaysSinceRestart} dni bez restartu",
+                        connectionStatusText(status?.connectionUp, status?.routerUptimeDays),
                         style = IntertellType.mono,
                         color = IntertellColors.Text50,
                         modifier = Modifier.padding(top = 3.dp),
                     )
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(IntertellColors.Green))
-                    Text("Sprawne", style = IntertellType.chip, color = IntertellColors.Green, modifier = Modifier.padding(start = 7.dp))
+                if (status?.connectionUp == true) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(IntertellColors.Green))
+                        Text("Sprawne", style = IntertellType.chip, color = IntertellColors.Green, modifier = Modifier.padding(start = 7.dp))
+                    }
                 }
             }
             Divider()
-            LinkRow2("Ustawienia DMZ", "Host wystawiony do internetu", trailing = "Wyłączona", onClick = viewModel::goDmz, divider = true)
+            LinkRow2(
+                "Ustawienia DMZ", "Host wystawiony do internetu",
+                trailing = if (dmz?.enabled == true) "Włączona" else "Wyłączona",
+                onClick = viewModel::goDmz, divider = true,
+            )
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -188,6 +199,15 @@ fun SettingsScreen(viewModel: ClientViewModel, state: ClientUiState) {
 
         OutlineButton("Wyloguj", onClick = viewModel::logout, modifier = Modifier.padding(top = 16.dp))
     }
+}
+
+private fun connectionStatusText(connectionUp: Boolean?, uptimeDays: Int?): String {
+    val ont = when (connectionUp) {
+        true -> "ONT online"
+        false -> "ONT offline"
+        null -> "status ONT nieznany"
+    }
+    return if (uptimeDays != null) "$ont · router $uptimeDays dni bez restartu" else ont
 }
 
 @Composable
