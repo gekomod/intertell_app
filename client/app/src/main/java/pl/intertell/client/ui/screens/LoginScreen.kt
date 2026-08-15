@@ -3,11 +3,11 @@ package pl.intertell.client.ui.screens
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -39,124 +39,125 @@ fun LoginScreen(viewModel: ClientViewModel, state: ClientUiState) {
     var editingServer by remember { mutableStateOf(false) }
     var serverDraft by remember(state.serverUrl) { mutableStateOf(state.serverUrl) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .verticalScroll(rememberScrollState())
-            .padding(horizontal = 28.dp),
-        verticalArrangement = Arrangement.Center,
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(R.drawable.mascot_client),
             contentDescription = null,
-            contentScale = ContentScale.Fit,
+            contentScale = ContentScale.FillWidth,
             modifier = Modifier
-                .height(150.dp)
-                .align(Alignment.CenterHorizontally),
+                .width(186.dp)
+                .align(Alignment.BottomEnd),
         )
-        Image(
-            painter = painterResource(R.drawable.logo_intertell),
-            contentDescription = "Intertell",
-            contentScale = ContentScale.Fit,
+        Column(
             modifier = Modifier
-                .padding(top = 10.dp)
-                .width(212.dp)
-                .align(Alignment.CenterHorizontally),
-        )
-        Text(
-            "Twoje konto abonenckie",
-            style = IntertellType.display,
-            color = IntertellColors.TextPrimary,
-            modifier = Modifier
-                .padding(top = 26.dp)
-                .align(Alignment.CenterHorizontally),
-        )
-        Text(
-            "Internet światłowodowy — faktury, umowy i pakiet w jednym miejscu.",
-            style = IntertellType.body,
-            color = IntertellColors.Text55,
-            modifier = Modifier
-                .padding(top = 8.dp, bottom = 30.dp)
-                .align(Alignment.CenterHorizontally),
-        )
-
-        Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            LabeledTextField(
-                label = "Numer umowy lub e-mail",
-                value = contractOrEmail,
-                onValueChange = { contractOrEmail = it },
-            )
-            LabeledTextField(
-                label = "Hasło",
-                value = password,
-                onValueChange = { password = it },
-                isPassword = true,
-            )
-        }
-
-        if (state.loginError != null) {
-            Text(
-                state.loginError,
-                style = IntertellType.bodySmall,
-                color = IntertellColors.Danger,
-                modifier = Modifier.padding(top = 10.dp),
-            )
-        }
-
-        SolidButton(
-            text = if (state.loginLoading) "Logowanie…" else "Zaloguj przez LMS",
-            onClick = { viewModel.login(contractOrEmail, password) },
-            enabled = !state.loginLoading,
-            modifier = Modifier.padding(top = 22.dp),
-        )
-        if (state.loginLoading) {
-            Row(
+                .fillMaxSize()
+                .verticalScroll(rememberScrollState())
+                .padding(horizontal = 28.dp),
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Image(
+                painter = painterResource(R.drawable.logo_intertell),
+                contentDescription = "Intertell",
+                contentScale = ContentScale.Fit,
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(top = 12.dp),
-                horizontalArrangement = Arrangement.Center,
-            ) {
-                CircularProgressIndicator(modifier = Modifier.width(18.dp), color = IntertellColors.Accent, strokeWidth = 2.dp)
+                    .width(212.dp)
+                    .align(Alignment.CenterHorizontally),
+            )
+            Text(
+                "Twoje konto abonenckie",
+                style = IntertellType.display,
+                color = IntertellColors.TextPrimary,
+                modifier = Modifier
+                    .padding(top = 30.dp)
+                    .align(Alignment.CenterHorizontally),
+            )
+            Text(
+                "Internet światłowodowy — faktury, umowy i pakiet w jednym miejscu.",
+                style = IntertellType.body,
+                color = IntertellColors.Text55,
+                modifier = Modifier
+                    .padding(top = 8.dp, bottom = 30.dp)
+                    .align(Alignment.CenterHorizontally),
+            )
+
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                LabeledTextField(
+                    label = "Numer umowy lub e-mail",
+                    value = contractOrEmail,
+                    onValueChange = { contractOrEmail = it },
+                )
+                LabeledTextField(
+                    label = "Hasło",
+                    value = password,
+                    onValueChange = { password = it },
+                    isPassword = true,
+                )
             }
-        }
 
-        if (!editingServer) {
-            Text(
-                "Serwer: ${state.serverUrl} · Zmień",
-                style = IntertellType.monoFootnote,
-                color = IntertellColors.Text42,
-                modifier = Modifier
-                    .padding(top = 22.dp)
-                    .clickable { editingServer = true },
+            if (state.loginError != null) {
+                Text(
+                    state.loginError,
+                    style = IntertellType.bodySmall,
+                    color = IntertellColors.Danger,
+                    modifier = Modifier.padding(top = 10.dp),
+                )
+            }
+
+            SolidButton(
+                text = if (state.loginLoading) "Logowanie…" else "Zaloguj przez LMS",
+                onClick = { viewModel.login(contractOrEmail, password) },
+                enabled = !state.loginLoading,
+                modifier = Modifier.padding(top = 22.dp),
             )
-        } else {
-            Column(modifier = Modifier.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                LabeledTextField(label = "Adres serwera", value = serverDraft, onValueChange = { serverDraft = it })
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        "Zapisz",
-                        style = IntertellType.bodyBold,
-                        color = IntertellColors.Accent,
-                        modifier = Modifier.clickable {
-                            viewModel.setServerUrl(serverDraft)
-                            editingServer = false
-                        },
-                    )
-                    Text(
-                        "Anuluj",
-                        style = IntertellType.bodyBold,
-                        color = IntertellColors.Text55,
-                        modifier = Modifier.clickable { editingServer = false },
-                    )
+            if (state.loginLoading) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 12.dp),
+                    horizontalArrangement = Arrangement.Center,
+                ) {
+                    CircularProgressIndicator(modifier = Modifier.width(18.dp), color = IntertellColors.Accent, strokeWidth = 2.dp)
                 }
             }
-        }
 
-        Text(
-            "Uwierzytelnianie i dane abonenta pochodzą z systemu LMS. Aplikacja nie przechowuje haseł.",
-            style = IntertellType.monoFootnote,
-            color = IntertellColors.Text42,
-            modifier = Modifier.padding(top = 20.dp),
-        )
+            if (!editingServer) {
+                Text(
+                    "Serwer: ${state.serverUrl} · Zmień",
+                    style = IntertellType.monoFootnote,
+                    color = IntertellColors.Text42,
+                    modifier = Modifier
+                        .padding(top = 22.dp)
+                        .clickable { editingServer = true },
+                )
+            } else {
+                Column(modifier = Modifier.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    LabeledTextField(label = "Adres serwera", value = serverDraft, onValueChange = { serverDraft = it })
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(
+                            "Zapisz",
+                            style = IntertellType.bodyBold,
+                            color = IntertellColors.Accent,
+                            modifier = Modifier.clickable {
+                                viewModel.setServerUrl(serverDraft)
+                                editingServer = false
+                            },
+                        )
+                        Text(
+                            "Anuluj",
+                            style = IntertellType.bodyBold,
+                            color = IntertellColors.Text55,
+                            modifier = Modifier.clickable { editingServer = false },
+                        )
+                    }
+                }
+            }
+
+            Text(
+                "Uwierzytelnianie i dane abonenta pochodzą z systemu LMS. Aplikacja nie przechowuje haseł.",
+                style = IntertellType.monoFootnote,
+                color = IntertellColors.Text42,
+                modifier = Modifier.padding(top = 20.dp),
+            )
+        }
     }
 }
