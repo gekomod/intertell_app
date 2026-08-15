@@ -28,6 +28,7 @@ import pl.intertell.technik.data.geo.OsrmRouter
 import pl.intertell.technik.data.geo.RouteInfo
 import pl.intertell.technik.update.UpdateChecker
 import pl.intertell.technik.update.UpdateInfo
+import pl.intertell.technik.update.UpdateInstaller
 
 class TechnicianViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -81,6 +82,12 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun dismissUpdate() {
+        _updateAvailable.value = null
+    }
+
+    fun startUpdateDownload() {
+        val update = _updateAvailable.value ?: return
+        UpdateInstaller.startDownload(getApplication(), update)
         _updateAvailable.value = null
     }
 

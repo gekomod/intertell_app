@@ -21,6 +21,22 @@ android {
         buildConfigField("int", "BUILD_NUMBER", "$buildNumber")
     }
 
+    // A fixed, checked-in debug keystore — without this, every CI run signs
+    // with a fresh auto-generated key (AGP's default debug signing config
+    // points at $HOME/.android/debug.keystore, which doesn't persist across
+    // GitHub Actions runners), so Android refuses to install any release as
+    // an "update" over the previous one: different signature = different app
+    // as far as the installer is concerned. Same keystore every build fixes
+    // in-place updates. Not a secret — it only ever signs debug builds.
+    signingConfigs {
+        getByName("debug") {
+            storeFile = file("debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             isMinifyEnabled = false

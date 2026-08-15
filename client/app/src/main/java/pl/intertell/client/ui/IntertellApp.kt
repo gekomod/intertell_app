@@ -21,7 +21,7 @@ import pl.intertell.client.ClientScreen
 import pl.intertell.client.ClientViewModel
 import pl.intertell.client.ui.components.FullScreenOutcome
 import pl.intertell.client.ui.components.ScrimOverlay
-import pl.intertell.client.ui.components.UpdateBanner
+import pl.intertell.client.ui.components.UpdateDialog
 import pl.intertell.client.ui.screens.ContactScreen
 import pl.intertell.client.ui.screens.ContractsScreen
 import pl.intertell.client.ui.screens.DmzScreen
@@ -43,10 +43,11 @@ fun IntertellApp(viewModel: ClientViewModel) {
     val state by viewModel.uiState.collectAsState()
     val update by viewModel.updateAvailable.collectAsState()
 
+    update?.let {
+        UpdateDialog(update = it, onDismiss = viewModel::dismissUpdate, onInstall = viewModel::startUpdateDownload)
+    }
+
     Scaffold(
-        topBar = {
-            update?.let { UpdateBanner(update = it, onDismiss = viewModel::dismissUpdate) }
-        },
         bottomBar = {
             if (state.showBottomBar) {
                 BottomTabBar(screen = state.screen, viewModel = viewModel)

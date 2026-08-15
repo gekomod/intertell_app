@@ -18,6 +18,7 @@ import pl.intertell.client.data.ServiceStatus
 import pl.intertell.client.data.api.ApiIntertellRepository
 import pl.intertell.client.update.UpdateChecker
 import pl.intertell.client.update.UpdateInfo
+import pl.intertell.client.update.UpdateInstaller
 
 class ClientViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -58,6 +59,12 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun dismissUpdate() {
+        _updateAvailable.value = null
+    }
+
+    fun startUpdateDownload() {
+        val update = _updateAvailable.value ?: return
+        UpdateInstaller.startDownload(getApplication(), update)
         _updateAvailable.value = null
     }
 

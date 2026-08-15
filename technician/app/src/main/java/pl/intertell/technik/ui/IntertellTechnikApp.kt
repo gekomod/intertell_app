@@ -11,7 +11,7 @@ import androidx.compose.ui.Modifier
 import pl.intertell.technik.TechScreen
 import pl.intertell.technik.TechnicianViewModel
 import pl.intertell.technik.ui.components.FullScreenOutcome
-import pl.intertell.technik.ui.components.UpdateBanner
+import pl.intertell.technik.ui.components.UpdateDialog
 import pl.intertell.technik.ui.screens.AdminScreen
 import pl.intertell.technik.ui.screens.CustomerScreen
 import pl.intertell.technik.ui.screens.JobDetailScreen
@@ -27,10 +27,11 @@ fun IntertellTechnikApp(viewModel: TechnicianViewModel) {
     val state by viewModel.uiState.collectAsState()
     val update by viewModel.updateAvailable.collectAsState()
 
+    update?.let {
+        UpdateDialog(update = it, onDismiss = viewModel::dismissUpdate, onInstall = viewModel::startUpdateDownload)
+    }
+
     Scaffold(
-        topBar = {
-            update?.let { UpdateBanner(update = it, onDismiss = viewModel::dismissUpdate) }
-        },
         bottomBar = {
             if (state.showBottomBar) {
                 BottomTabBar(screen = state.screen, viewModel = viewModel)
