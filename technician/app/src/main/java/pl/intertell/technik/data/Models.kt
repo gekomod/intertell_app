@@ -53,6 +53,13 @@ data class Job(
     val isUrgent: Boolean get() = (kind == JobKind.MESSAGE && status == "new") || kind == JobKind.LMS_OUTAGE
 }
 
+data class OpticalInfo(
+    val online: Boolean,
+    val txDbm: Double,
+    val rxDbm: Double,
+    val tempC: Double,
+)
+
 data class Device(
     val id: Long,
     val kind: String,
@@ -61,6 +68,8 @@ data class Device(
     val serial: String,
     val location: String,
     val status: String,
+    /** Live signal from the configured Huawei OLT (see server's internal/onu) — null when unavailable (not the router/ONT device, OLT not configured, SNMP lookup failed, ...). */
+    val optical: OpticalInfo? = null,
 )
 
 data class LmsStatus(

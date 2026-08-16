@@ -100,6 +100,22 @@ fun RouterScreen(viewModel: TechnicianViewModel) {
             )
         }
 
+        val optical = routerDevice?.optical
+        if (optical != null) {
+            Text("Sygnał optyczny (ONT)", style = IntertellType.bodyBold, color = IntertellColors.TextPrimary, modifier = Modifier.padding(top = 22.dp, bottom = 10.dp))
+            Card {
+                StatusRow("ONT", if (optical.online) "online" else "offline", optical.online)
+                Row(modifier = Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
+                    OpticalMetric("RX", optical.rxDbm, warn = optical.rxDbm < -27.0)
+                    OpticalMetric("TX", optical.txDbm, warn = false)
+                    Column {
+                        Text("TEMP.", style = IntertellType.monoSmall, color = IntertellColors.Text45)
+                        Text("${optical.tempC} °C", style = IntertellType.monoBold, color = IntertellColors.TextPrimary, modifier = Modifier.padding(top = 2.dp))
+                    }
+                }
+            }
+        }
+
         Text("Sieć i zabezpieczenia", style = IntertellType.bodyBold, color = IntertellColors.TextPrimary, modifier = Modifier.padding(top = 22.dp, bottom = 10.dp))
         Card {
             StatusRow("DMZ", if (router.dmzOn) "włączona · ${router.dmzHost}" else "wyłączona", router.dmzOn)
@@ -113,6 +129,19 @@ fun RouterScreen(viewModel: TechnicianViewModel) {
             style = IntertellType.monoFootnote,
             color = IntertellColors.Text45,
             modifier = Modifier.padding(top = 16.dp),
+        )
+    }
+}
+
+@Composable
+private fun OpticalMetric(label: String, dbm: Double, warn: Boolean) {
+    Column {
+        Text(label, style = IntertellType.monoSmall, color = IntertellColors.Text45)
+        Text(
+            "$dbm dBm",
+            style = IntertellType.monoBold,
+            color = if (warn) IntertellColors.Danger else IntertellColors.TextPrimary,
+            modifier = Modifier.padding(top = 2.dp),
         )
     }
 }

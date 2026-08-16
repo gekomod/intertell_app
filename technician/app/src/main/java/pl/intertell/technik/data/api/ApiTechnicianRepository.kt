@@ -10,6 +10,7 @@ import pl.intertell.technik.data.JobKind
 import pl.intertell.technik.data.LmsOnlyMatch
 import pl.intertell.technik.data.LoginResult
 import pl.intertell.technik.data.LmsStatus
+import pl.intertell.technik.data.OpticalInfo
 import pl.intertell.technik.data.RouterInfo
 import pl.intertell.technik.data.ServiceHistoryEntry
 import pl.intertell.technik.data.TeamMember
@@ -138,7 +139,11 @@ private fun JSONObject.toLmsOutageJob() = Job(
 private fun JSONObject.toDevice() = Device(
     id = getLong("id"), kind = optString("kind"), kindLabel = optString("kind_label"),
     model = optString("model"), serial = optString("serial"), location = optString("location"),
-    status = optString("status"),
+    status = optString("status"), optical = optJSONObject("optical")?.toOpticalInfo(),
+)
+
+private fun JSONObject.toOpticalInfo() = OpticalInfo(
+    online = optBoolean("online"), txDbm = optDouble("tx_dbm"), rxDbm = optDouble("rx_dbm"), tempC = optDouble("temp_c"),
 )
 
 private fun JSONObject.toCustomer(): Customer {
