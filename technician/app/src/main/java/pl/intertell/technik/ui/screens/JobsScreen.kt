@@ -150,9 +150,13 @@ fun JobsScreen(viewModel: TechnicianViewModel) {
                         Row(modifier = Modifier.fillMaxWidth()) {
                             Column(modifier = Modifier.width(90.dp)) {
                                 Text(
-                                    if (job.kind == JobKind.MESSAGE) "ZGŁOSZENIE" else "INSTALACJA",
+                                    when (job.kind) {
+                                        JobKind.MESSAGE -> "ZGŁOSZENIE"
+                                        JobKind.INSTALL -> "INSTALACJA"
+                                        JobKind.LMS_OUTAGE -> "AWARIA LMS"
+                                    },
                                     style = IntertellType.monoSmall,
-                                    color = IntertellColors.Text45,
+                                    color = if (job.kind == JobKind.LMS_OUTAGE) IntertellColors.Danger else IntertellColors.Text45,
                                 )
                                 Text(job.createdAt, style = IntertellType.label, color = IntertellColors.Text45, modifier = Modifier.padding(top = 2.dp))
                             }

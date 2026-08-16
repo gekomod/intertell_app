@@ -15,13 +15,17 @@ data class TeamMember(
 
 data class LoginResult(val technician: TeamMember, val officePhone: String)
 
-enum class JobKind { MESSAGE, INSTALL }
+enum class JobKind { MESSAGE, INSTALL, LMS_OUTAGE }
 
 /**
- * A technician's task — either a customer contact-message inquiry or an
- * installation request assigned to them in the intratell backend. There is
- * no separate "scheduled visit" concept server-side (no time/duration/scope
- * fields), so this mirrors exactly what /api/tech/tasks returns.
+ * A technician's task — a customer contact-message inquiry, an
+ * installation request, or an open outage from LMS ("problem techniczny")
+ * assigned to them in the intratell backend. There is no separate
+ * "scheduled visit" concept server-side (no time/duration/scope fields), so
+ * this mirrors exactly what /api/tech/tasks returns. LMS_OUTAGE jobs always
+ * arrive with status "in_progress" — LMS has no local "started" concept, so
+ * completing one is the only transition, and it also closes the event in
+ * LMS itself (see TechnicianRepository.setTaskStatus).
  */
 data class Job(
     val id: Long,
@@ -33,7 +37,7 @@ data class Job(
     val detail: String,
     val createdAt: String,
     val status: String, // new | assigned | in_progress | done
-    /** Only ever set for [JobKind.MESSAGE] — install requests aren't linked to a customer record. */
+    /** Set for [JobKind.MESSAGE] and, when the LMS customer is linked to a local one, [JobKind.LMS_OUTAGE] — install requests aren't linked to a customer record. */
     val customerNo: String = "",
     /** Server-geocoded coordinates for [address], when the server could resolve it — see api_tech.go's use of internal/geo. */
     val lat: Double? = null,
@@ -46,7 +50,7 @@ data class Job(
             "assigned" -> "Przypisane"
             else -> "Nowe"
         }
-    val isUrgent: Boolean get() = kind == JobKind.MESSAGE && status == "new"
+    val isUrgent: Boolean get() = (kind == JobKind.MESSAGE && status == "new") || kind == JobKind.LMS_OUTAGE
 }
 
 data class Device(

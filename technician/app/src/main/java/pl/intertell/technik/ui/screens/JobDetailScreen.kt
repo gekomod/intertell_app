@@ -58,7 +58,11 @@ fun JobDetailScreen(viewModel: TechnicianViewModel) {
             Text(j.statusLabel, style = IntertellType.monoSmall, color = IntertellColors.Text45)
         }
         Text(
-            if (j.kind == JobKind.MESSAGE) "Zapytanie kontaktowe · ${j.createdAt}" else "Zgłoszenie instalacyjne · ${j.createdAt}",
+            when (j.kind) {
+                JobKind.MESSAGE -> "Zapytanie kontaktowe · ${j.createdAt}"
+                JobKind.INSTALL -> "Zgłoszenie instalacyjne · ${j.createdAt}"
+                JobKind.LMS_OUTAGE -> "Awaria z LMS · ${j.createdAt}"
+            },
             style = IntertellType.body,
             color = IntertellColors.Text6,
             modifier = Modifier.padding(top = 6.dp),
@@ -98,7 +102,7 @@ fun JobDetailScreen(viewModel: TechnicianViewModel) {
             }
         }
 
-        if (j.kind == JobKind.MESSAGE && j.customerNo.isNotBlank()) {
+        if (j.kind != JobKind.INSTALL && j.customerNo.isNotBlank()) {
             OutlineButton(
                 "Karta klienta i panel ONT",
                 onClick = viewModel::openCustomerForSelectedJob,

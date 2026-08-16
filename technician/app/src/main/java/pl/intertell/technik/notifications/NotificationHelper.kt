@@ -44,7 +44,11 @@ object NotificationHelper {
 
         val urgent = job.isUrgent
         val color = if (urgent) URGENT_COLOR else ROUTINE_COLOR
-        val kindLabel = if (job.kind == JobKind.INSTALL) "Nowe zgłoszenie instalacyjne" else "Nowe zapytanie kontaktowe"
+        val kindLabel = when (job.kind) {
+            JobKind.INSTALL -> "Nowe zgłoszenie instalacyjne"
+            JobKind.LMS_OUTAGE -> "Nowa awaria z LMS"
+            JobKind.MESSAGE -> "Nowe zapytanie kontaktowe"
+        }
         val title = if (urgent) "🔴 $kindLabel" else "🟢 $kindLabel"
         val body = listOfNotNull(job.title.takeIf { it != kindLabel }, job.clientName, job.address.takeIf { it.isNotBlank() })
             .joinToString(" · ")

@@ -42,15 +42,19 @@ class ApiTechnicianRepository(context: Context) : TechnicianRepository {
         val response = api.get("/api/tech/tasks")
         val messages = response.optJSONArrayOrEmpty("contact_messages").map { it.toMessageJob() }
         val installs = response.optJSONArrayOrEmpty("install_requests").map { it.toInstallJob() }
-        return (messages + installs).sortedByDescending { it.createdAt }
+        val outages = response.optJSONArrayOrEmpty("lms_outages").map { it.toLmsOutageJob() }
+        return (messages + installs + outages).sortedByDescending { it.createdAt }
     }
 
     override suspend fun setTaskStatus(job: Job, status: String) {
-        val path = when (job.kind) {
-            JobKind.MESSAGE -> "/api/tech/tasks/messages/${job.id}/status"
-            JobKind.INSTALL -> "/api/tech/tasks/installs/${job.id}/status"
+        when (job.kind) {
+            JobKind.MESSAGE -> api.post("/api/tech/tasks/messages/${job.id}/status", JSONObject().put("status", status))
+            JobKind.INSTALL -> api.post("/api/tech/tasks/installs/${job.id}/status", JSONObject().put("status", status))
+            // LMS outages support only one transition (complete) — it also
+            // closes the event in LMS itself, so there's no separate status
+            // payload to send.
+            JobKind.LMS_OUTAGE -> api.post("/api/tech/tasks/lms-outages/${job.id}/complete")
         }
-        api.post(path, JSONObject().put("status", status))
     }
 
     override suspend fun searchCustomers(query: String): CustomerSearchResult {
@@ -115,6 +119,19 @@ private fun JSONObject.toInstallJob() = Job(
     title = "Zgłoszenie instalacyjne",
     clientName = optString("name"), phone = optString("phone"), address = optString("address"),
     detail = "", createdAt = optString("created_at"), status = optString("status", "new"),
+    lat = optDoubleOrNull("lat"), lon = optDoubleOrNull("lon"),
+)
+
+private fun JSONObject.toLmsOutageJob() = Job(
+    id = getLong("id"), kind = JobKind.LMS_OUTAGE,
+    title = optString("title").ifBlank { "Awaria techniczna" },
+    clientName = optString("name"), phone = "", address = optString("address"),
+    detail = optString("description"), createdAt = optString("created_at"),
+    // Always "in_progress" — LMS has no "not yet started" concept for an
+    // open event, so the job detail screen goes straight to "Zakończ
+    // zgłoszenie" instead of an extra "Rozpocznij" step.
+    status = "in_progress",
+    customerNo = optString("customer_no"),
     lat = optDoubleOrNull("lat"), lon = optDoubleOrNull("lon"),
 )
 
