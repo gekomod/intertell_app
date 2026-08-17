@@ -8,7 +8,6 @@ import android.content.pm.PackageManager
 import android.graphics.Color
 import android.location.LocationManager
 import android.net.Uri
-import java.io.File
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -18,17 +17,30 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Layers
+import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color as ComposeColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
@@ -41,6 +53,7 @@ import org.maplibre.android.geometry.LatLng
 import org.maplibre.android.location.LocationComponentActivationOptions
 import org.maplibre.android.location.modes.CameraMode
 import org.maplibre.android.location.modes.RenderMode
+import org.maplibre.android.maps.MapLibreMap
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression
@@ -50,25 +63,40 @@ import org.maplibre.android.style.layers.PropertyFactory
 import org.maplibre.android.style.sources.GeoJsonSource
 import pl.intertell.technik.BuildConfig
 import pl.intertell.technik.TechnicianViewModel
+import pl.intertell.technik.data.InfrastructureMap
 import pl.intertell.technik.ui.theme.IntertellColors
 import pl.intertell.technik.ui.theme.IntertellType
 
 private const val QFIELD_PACKAGE = "ch.opengis.qfield"
 private const val INFRASTRUCTURE_SOURCE_ID = "infrastructure"
+private const val LINE_LAYER_ID = "infrastructure-lines"
+private const val POINT_LAYER_ID = "infrastructure-points"
 
 // Roughly the middle of Poland — a reasonable default before the technician
-// pans to their own area; there's no server-computed bounding box to fit to
-// (see server's internal/qfield), so this is a fixed starting view, not
-// centered on the actual data.
+// pans to their own area or a GPS fix arrives; there's no server-computed
+// bounding box to fit to (see server's internal/qfield).
 private val POLAND_CENTER = LatLng(52.06, 19.48)
 private const val POLAND_ZOOM = 6.0
+
+// Cycled by layer name (hashed) so each GeoPackage table gets a stable,
+// distinct color without the server needing to know anything about styling
+// — the .qgz project's own QGIS symbology isn't parsed (see
+// internal/qfield/geopackage.go's doc comment).
+private val LAYER_PALETTE = listOf(
+    "#0E86C4", "#D93B1E", "#2E9E5B", "#F2A93B",
+    "#8B5CF6", "#EC4899", "#14B8A6", "#F97316",
+)
+
+private fun colorForLayer(name: String): Int =
+    Color.parseColor(LAYER_PALETTE[(name.hashCode() and Int.MAX_VALUE) % LAYER_PALETTE.size])
 
 @Composable
 fun QgisScreen(viewModel: TechnicianViewModel) {
     val context = LocalContext.current
-    val geoJson by viewModel.infrastructureGeoJson.collectAsState()
+    val infrastructure by viewModel.infrastructureGeoJson.collectAsState()
     val loading by viewModel.infrastructureLoading.collectAsState()
     val error by viewModel.infrastructureError.collectAsState()
+    val visibleLayers by viewModel.visibleInfrastructureLayers.collectAsState()
 
     Column(
         modifier = Modifier
@@ -93,7 +121,12 @@ fun QgisScreen(viewModel: TechnicianViewModel) {
             contentAlignment = Alignment.Center,
         ) {
             when {
-                geoJson != null -> InfrastructureMap(geoJsonFile = geoJson!!, modifier = Modifier.fillMaxSize())
+                infrastructure != null -> InfrastructureMapView(
+                    infrastructure = infrastructure!!,
+                    visibleLayers = visibleLayers,
+                    onToggleLayer = viewModel::toggleInfrastructureLayer,
+                    modifier = Modifier.fillMaxSize(),
+                )
                 loading -> CircularProgressIndicator(color = IntertellColors.Accent)
                 error != null -> Column(modifier = Modifier.padding(24.dp)) {
                     Text(
@@ -127,12 +160,19 @@ fun QgisScreen(viewModel: TechnicianViewModel) {
 }
 
 @Composable
-private fun InfrastructureMap(geoJsonFile: File, modifier: Modifier = Modifier) {
+private fun InfrastructureMapView(
+    infrastructure: InfrastructureMap,
+    visibleLayers: Set<String>,
+    onToggleLayer: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapView = remember {
         MapView(context).apply { onCreate(null) }
     }
+    var mapLibreMap by remember { mutableStateOf<MapLibreMap?>(null) }
+    var showLayersMenu by remember { mutableStateOf(false) }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -152,71 +192,144 @@ private fun InfrastructureMap(geoJsonFile: File, modifier: Modifier = Modifier) 
         }
     }
 
-    AndroidView(factory = { mapView }, modifier = modifier) { view ->
-        view.getMapAsync { map ->
-            map.moveCamera(CameraUpdateFactory.newLatLngZoom(POLAND_CENTER, POLAND_ZOOM))
-            val styleUrl = "https://api.maptiler.com/maps/streets-v2/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
-            map.setStyle(Style.Builder().fromUri(styleUrl)) { style ->
-                if (style.getSource(INFRASTRUCTURE_SOURCE_ID) != null) return@setStyle
-                // The file:// URI constructor silently loaded nothing on
-                // real devices (MapLibre's native file source appears not
-                // to handle it reliably) — reading the text ourselves and
-                // using the String constructor is the same approach the
-                // pre-OOM-fix code used, and is safe now that the backend
-                // trims the payload to a couple MB (see internal/qfield).
-                style.addSource(GeoJsonSource(INFRASTRUCTURE_SOURCE_ID, geoJsonFile.readText()))
-                style.addLayer(
-                    LineLayer("infrastructure-lines", INFRASTRUCTURE_SOURCE_ID)
-                        // GeoPackage exports from QGIS are almost always
-                        // Multi*-typed even for single-part features, so a
-                        // filter on bare "LineString" alone silently matches
-                        // nothing — the whole infrastructure layer rendered
-                        // invisibly for that reason.
-                        .withFilter(
-                            Expression.any(
-                                Expression.eq(Expression.geometryType(), "LineString"),
-                                Expression.eq(Expression.geometryType(), "MultiLineString"),
+    Box(modifier = modifier) {
+        AndroidView(factory = { mapView }, modifier = Modifier.fillMaxSize()) { view ->
+            view.getMapAsync { map ->
+                mapLibreMap = map
+                map.moveCamera(CameraUpdateFactory.newLatLngZoom(POLAND_CENTER, POLAND_ZOOM))
+                val styleUrl = "https://api.maptiler.com/maps/streets-v2/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
+                map.setStyle(Style.Builder().fromUri(styleUrl)) { style ->
+                    if (style.getSource(INFRASTRUCTURE_SOURCE_ID) != null) return@setStyle
+                    // The file:// URI constructor silently loaded nothing on
+                    // real devices (MapLibre's native file source appears not
+                    // to handle it reliably) — reading the text ourselves and
+                    // using the String constructor is the same approach the
+                    // pre-OOM-fix code used, and is safe now that the backend
+                    // trims the payload to a couple MB (see internal/qfield).
+                    style.addSource(GeoJsonSource(INFRASTRUCTURE_SOURCE_ID, infrastructure.file.readText()))
+                    style.addLayer(
+                        LineLayer(LINE_LAYER_ID, INFRASTRUCTURE_SOURCE_ID)
+                            .withProperties(
+                                PropertyFactory.lineColor(layerColorExpression(infrastructure.layers)),
+                                PropertyFactory.lineWidth(3f),
                             ),
-                        )
-                        .withProperties(
-                            PropertyFactory.lineColor(Color.parseColor("#0E86C4")),
-                            PropertyFactory.lineWidth(3f),
-                        ),
-                )
-                style.addLayer(
-                    CircleLayer("infrastructure-points", INFRASTRUCTURE_SOURCE_ID)
-                        .withFilter(
-                            Expression.any(
-                                Expression.eq(Expression.geometryType(), "Point"),
-                                Expression.eq(Expression.geometryType(), "MultiPoint"),
+                    )
+                    style.addLayer(
+                        CircleLayer(POINT_LAYER_ID, INFRASTRUCTURE_SOURCE_ID)
+                            .withProperties(
+                                PropertyFactory.circleColor(layerColorExpression(infrastructure.layers)),
+                                PropertyFactory.circleRadius(6f),
+                                PropertyFactory.circleStrokeColor(Color.WHITE),
+                                PropertyFactory.circleStrokeWidth(2f),
                             ),
-                        )
-                        .withProperties(
-                            PropertyFactory.circleColor(Color.parseColor("#D93B1E")),
-                            PropertyFactory.circleRadius(6f),
-                            PropertyFactory.circleStrokeColor(Color.WHITE),
-                            PropertyFactory.circleStrokeWidth(2f),
-                        ),
-                )
+                    )
+                    applyLayerFilters(style, infrastructure.layers, visibleLayers)
 
-                // Permission was already requested at app startup
-                // (MainActivity.askForLocationPermission) — this just skips
-                // the indicator if it was denied, same as elsewhere in the
-                // app.
-                if (hasLocationPermission(context)) {
-                    map.locationComponent.apply {
-                        activateLocationComponent(LocationComponentActivationOptions.builder(context, style).build())
-                        isLocationComponentEnabled = true
-                        renderMode = RenderMode.COMPASS
-                        cameraMode = CameraMode.NONE
+                    // Permission was already requested at app startup
+                    // (MainActivity.askForLocationPermission) — this just
+                    // skips the indicator if it was denied, same as
+                    // elsewhere in the app.
+                    if (hasLocationPermission(context)) {
+                        map.locationComponent.apply {
+                            activateLocationComponent(LocationComponentActivationOptions.builder(context, style).build())
+                            isLocationComponentEnabled = true
+                            renderMode = RenderMode.COMPASS
+                            cameraMode = CameraMode.NONE
+                        }
+                        lastKnownLocation(context)?.let { location ->
+                            map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), 14.0))
+                        }
                     }
-                    lastKnownLocation(context)?.let { location ->
-                        map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), 14.0))
+                }
+            }
+        }
+
+        // Live filter updates when a checkbox is toggled — the source/layers
+        // themselves are only ever created once (see the style.getSource
+        // guard above), this just re-applies which features they show.
+        LaunchedEffect(visibleLayers, mapLibreMap) {
+            val style = mapLibreMap?.style ?: return@LaunchedEffect
+            applyLayerFilters(style, infrastructure.layers, visibleLayers)
+        }
+
+        if (infrastructure.layers.isNotEmpty()) {
+            Box(modifier = Modifier.align(Alignment.TopEnd).padding(12.dp)) {
+                IconButton(
+                    onClick = { showLayersMenu = !showLayersMenu },
+                    modifier = Modifier
+                        .size(40.dp)
+                        .clip(CircleShape)
+                        .background(IntertellColors.ScreenBackground),
+                ) {
+                    Icon(Icons.Filled.Layers, contentDescription = "Warstwy mapy", tint = IntertellColors.Accent)
+                }
+                if (showLayersMenu) {
+                    Column(
+                        modifier = Modifier
+                            .padding(top = 48.dp)
+                            .width(220.dp)
+                            .clip(RoundedCornerShape(14.dp))
+                            .background(IntertellColors.ScreenBackground)
+                            .padding(8.dp),
+                    ) {
+                        infrastructure.layers.forEach { layer ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onToggleLayer(layer) }
+                                    .padding(vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Checkbox(
+                                    checked = layer in visibleLayers,
+                                    onCheckedChange = { onToggleLayer(layer) },
+                                    colors = CheckboxDefaults.colors(checkedColor = ComposeColor(colorForLayer(layer))),
+                                )
+                                Text(layer, style = IntertellType.bodySmall, color = IntertellColors.TextPrimary)
+                            }
+                        }
                     }
                 }
             }
         }
     }
+}
+
+private fun layerColorExpression(layers: List<String>): Expression {
+    if (layers.isEmpty()) return Expression.color(Color.parseColor(LAYER_PALETTE[0]))
+    val stops = layers.map { Expression.stop(it, Expression.color(colorForLayer(it))) }.toTypedArray()
+    return Expression.match(Expression.get("layer"), Expression.color(Color.parseColor(LAYER_PALETTE[0])), *stops)
+}
+
+// GeoPackage exports from QGIS are almost always Multi*-typed even for
+// single-part features, so a filter on bare "LineString"/"Point" alone
+// silently matches nothing — that was the earlier bug that made the layer
+// render invisibly despite loading correctly.
+private fun applyLayerFilters(style: Style, layers: List<String>, visibleLayers: Set<String>) {
+    val lineTypeFilter = Expression.any(
+        Expression.eq(Expression.geometryType(), "LineString"),
+        Expression.eq(Expression.geometryType(), "MultiLineString"),
+    )
+    val pointTypeFilter = Expression.any(
+        Expression.eq(Expression.geometryType(), "Point"),
+        Expression.eq(Expression.geometryType(), "MultiPoint"),
+    )
+    // No layer list (e.g. an older server that hasn't sent X-Qfield-Layers
+    // yet) means "don't filter by layer name at all" — otherwise an empty
+    // visibleLayers set would hide every feature instead of showing them
+    // all, which is worse than not having the toggle menu at all.
+    if (layers.isEmpty()) {
+        (style.getLayer(LINE_LAYER_ID) as? LineLayer)?.setFilter(lineTypeFilter)
+        (style.getLayer(POINT_LAYER_ID) as? CircleLayer)?.setFilter(pointTypeFilter)
+        return
+    }
+    val visibleExpr = Expression.literal(visibleLayers.toTypedArray())
+    (style.getLayer(LINE_LAYER_ID) as? LineLayer)?.setFilter(
+        Expression.all(lineTypeFilter, Expression.in(Expression.get("layer"), visibleExpr)),
+    )
+    (style.getLayer(POINT_LAYER_ID) as? CircleLayer)?.setFilter(
+        Expression.all(pointTypeFilter, Expression.in(Expression.get("layer"), visibleExpr)),
+    )
 }
 
 private fun hasLocationPermission(context: Context): Boolean =

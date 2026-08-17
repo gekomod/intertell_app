@@ -28,11 +28,14 @@ interface TechnicianRepository {
     /**
      * Downloads the GeoJSON FeatureCollection (fiber runs, cabinets,
      * distribution points — see server's internal/qfield) straight to a
-     * local file and returns it, rather than a String — even a
-     * post-compression few-MB payload is enough to OOM-crash the app if it's
-     * round-tripped through a Java String/JSONObject first.
+     * local file, rather than a String — even a post-compression few-MB
+     * payload is enough to OOM-crash the app if it's round-tripped through a
+     * Java String/JSONObject first. [InfrastructureMap.layers] lists the
+     * underlying GeoPackage table names for a per-layer visibility toggle.
      */
-    suspend fun getInfrastructureGeoJson(): File
+    suspend fun getInfrastructureGeoJson(): InfrastructureMap
 }
+
+data class InfrastructureMap(val file: File, val layers: List<String>)
 
 class ApiException(message: String, val httpStatus: Int = 0) : Exception(message)

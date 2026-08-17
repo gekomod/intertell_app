@@ -6,7 +6,6 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.location.LocationManager
 import androidx.core.content.ContextCompat
-import java.io.File
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
@@ -19,6 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pl.intertell.technik.data.Customer
 import pl.intertell.technik.data.CustomerSearchResult
+import pl.intertell.technik.data.InfrastructureMap
 import pl.intertell.technik.data.Job
 import pl.intertell.technik.data.TeamMember
 import pl.intertell.technik.data.TechnicianRepository
@@ -76,14 +76,18 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
     private val _downloadProgress = MutableStateFlow<DownloadProgress?>(null)
     val downloadProgress: StateFlow<DownloadProgress?> = _downloadProgress.asStateFlow()
 
-    private val _infrastructureGeoJson = MutableStateFlow<File?>(null)
-    val infrastructureGeoJson: StateFlow<File?> = _infrastructureGeoJson.asStateFlow()
+    private val _infrastructureGeoJson = MutableStateFlow<InfrastructureMap?>(null)
+    val infrastructureGeoJson: StateFlow<InfrastructureMap?> = _infrastructureGeoJson.asStateFlow()
 
     private val _infrastructureLoading = MutableStateFlow(false)
     val infrastructureLoading: StateFlow<Boolean> = _infrastructureLoading.asStateFlow()
 
     private val _infrastructureError = MutableStateFlow<String?>(null)
     val infrastructureError: StateFlow<String?> = _infrastructureError.asStateFlow()
+
+    /** Layer names currently shown on the QGIS map — defaults to all of them once loaded. */
+    private val _visibleInfrastructureLayers = MutableStateFlow<Set<String>>(emptySet())
+    val visibleInfrastructureLayers: StateFlow<Set<String>> = _visibleInfrastructureLayers.asStateFlow()
 
     private var searchJob: CoroutineJob? = null
 
@@ -163,6 +167,7 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
         _selectedCustomer.value = null
         _infrastructureGeoJson.value = null
         _infrastructureError.value = null
+        _visibleInfrastructureLayers.value = emptySet()
         _uiState.update { TechnicianUiState(serverUrl = it.serverUrl) }
     }
 
@@ -178,11 +183,13 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
     fun goQgis() = navigate(TechScreen.QGIS).also { loadInfrastructure() }
 
     private fun loadInfrastructure() {
-        if (_infrastructureGeoJson.value?.exists() == true) return // loaded once per session — the network map doesn't change minute to minute
+        if (_infrastructureGeoJson.value?.file?.exists() == true) return // loaded once per session — the network map doesn't change minute to minute
         viewModelScope.launch {
             _infrastructureLoading.value = true
             try {
-                _infrastructureGeoJson.value = repository.getInfrastructureGeoJson()
+                val map = repository.getInfrastructureGeoJson()
+                _infrastructureGeoJson.value = map
+                _visibleInfrastructureLayers.value = map.layers.toSet()
                 _infrastructureError.value = null
             } catch (e: CancellationException) {
                 throw e
@@ -191,6 +198,10 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
             }
             _infrastructureLoading.value = false
         }
+    }
+
+    fun toggleInfrastructureLayer(layer: String) {
+        _visibleInfrastructureLayers.update { if (layer in it) it - layer else it + layer }
     }
 
     fun geocodeAddress(address: String) {

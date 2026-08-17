@@ -8,6 +8,7 @@ import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.Headers
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -48,9 +49,10 @@ class ApiClient(context: Context) {
      * enough to OOM-crash the app on its own, well before MapLibre even got
      * to render anything. Overwrites [destFile] on success only, so a failed
      * download never leaves a truncated file behind for a later read to trip
-     * over.
+     * over. Returns the response headers (e.g. QField's X-Qfield-Layers) —
+     * callers that only care about the file can ignore the result.
      */
-    suspend fun getToFile(path: String, destFile: File, readTimeoutSeconds: Long = 15): Unit =
+    suspend fun getToFile(path: String, destFile: File, readTimeoutSeconds: Long = 15): Headers =
         withContext(Dispatchers.IO) {
             try {
                 val baseUrl = config.getBaseUrl()
@@ -76,6 +78,7 @@ class ApiClient(context: Context) {
                     if (!tmpFile.renameTo(destFile)) {
                         throw ApiException("Nie udało się zapisać pobranego pliku.")
                     }
+                    it.headers
                 }
             } catch (e: CancellationException) {
                 throw e

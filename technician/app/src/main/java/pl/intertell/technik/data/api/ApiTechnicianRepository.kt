@@ -2,10 +2,12 @@ package pl.intertell.technik.data.api
 
 import android.content.Context
 import java.io.File
+import java.net.URLDecoder
 import org.json.JSONObject
 import pl.intertell.technik.data.Customer
 import pl.intertell.technik.data.CustomerSearchResult
 import pl.intertell.technik.data.Device
+import pl.intertell.technik.data.InfrastructureMap
 import pl.intertell.technik.data.Job
 import pl.intertell.technik.data.JobKind
 import pl.intertell.technik.data.LmsOnlyMatch
@@ -106,12 +108,18 @@ class ApiTechnicianRepository(context: Context) : TechnicianRepository {
     // quickly well within this window regardless.
     //
     // Streamed straight to a file (ApiClient.getToFile) instead of read into
-    // a String — MapLibre's GeoJsonSource can load directly from a file URI,
-    // so there's no need to ever hold the payload as a Java String at all.
-    override suspend fun getInfrastructureGeoJson(): File {
+    // a String — avoids ever holding the full HTTP response as a Java String
+    // during download; it's read back afterward, but by then it's a bounded
+    // few-MB file, not a network response.
+    override suspend fun getInfrastructureGeoJson(): InfrastructureMap {
         val dest = File(appContext.cacheDir, "infrastructure.geojson")
-        api.getToFile("/api/tech/infrastruktura", dest, readTimeoutSeconds = 60)
-        return dest
+        val headers = api.getToFile("/api/tech/infrastruktura", dest, readTimeoutSeconds = 60)
+        val layers = headers["X-Qfield-Layers"]
+            ?.split(",")
+            ?.mapNotNull { runCatching { URLDecoder.decode(it, "UTF-8") }.getOrNull() }
+            ?.filter { it.isNotBlank() }
+            ?: emptyList()
+        return InfrastructureMap(dest, layers)
     }
 }
 
