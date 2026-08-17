@@ -23,13 +23,14 @@ import pl.intertell.technik.ui.screens.QgisScreen
 import pl.intertell.technik.ui.screens.ReportScreen
 import pl.intertell.technik.ui.screens.RouterScreen
 import pl.intertell.technik.ui.screens.SearchScreen
+import pl.intertell.technik.ui.screens.SettingsScreen
 
 // System back button/gesture exits the app by default on any screen (there's
 // no Fragment/Navigation-Compose backstack here, just a flat `screen`
 // field) — these are the only screens where that default is actually
 // correct. Everywhere else the BackHandler below steps back one level
 // instead, mirroring each screen's own on-screen "←" link.
-private val rootScreens = setOf(TechScreen.LOGIN, TechScreen.JOBS)
+private val rootScreens = setOf(TechScreen.LOGIN, TechScreen.JOBS, TechScreen.SETTINGS)
 
 @Composable
 fun IntertellTechnikApp(viewModel: TechnicianViewModel) {
@@ -80,6 +81,7 @@ fun IntertellTechnikApp(viewModel: TechnicianViewModel) {
                 TechScreen.ROUTER -> RouterScreen(viewModel)
                 TechScreen.ADMIN -> AdminScreen(viewModel)
                 TechScreen.QGIS -> QgisScreen(viewModel)
+                TechScreen.SETTINGS -> SettingsScreen(viewModel, state)
             }
 
             if (state.jobDone) {

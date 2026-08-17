@@ -1,12 +1,14 @@
 package pl.intertell.technik.data.api
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import pl.intertell.technik.ui.theme.ThemeMode
 
 private val Context.dataStore by preferencesDataStore(name = "intertell_technik_prefs")
 
@@ -60,5 +62,25 @@ class ServerConfig(private val context: Context) {
 
     suspend fun clearSeenTaskKeys() {
         context.dataStore.edit { it.remove(seenTasksKey) }
+    }
+
+    private val themeModeKey = stringPreferencesKey("theme_mode")
+
+    suspend fun getThemeMode(): ThemeMode =
+        context.dataStore.data.map { it[themeModeKey] }.first()
+            ?.let { raw -> runCatching { ThemeMode.valueOf(raw) }.getOrNull() }
+            ?: ThemeMode.SYSTEM
+
+    suspend fun setThemeMode(mode: ThemeMode) {
+        context.dataStore.edit { it[themeModeKey] = mode.name }
+    }
+
+    private val biometricEnabledKey = booleanPreferencesKey("biometric_enabled")
+
+    suspend fun getBiometricEnabled(): Boolean =
+        context.dataStore.data.map { it[biometricEnabledKey] ?: false }.first()
+
+    suspend fun setBiometricEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[biometricEnabledKey] = enabled }
     }
 }

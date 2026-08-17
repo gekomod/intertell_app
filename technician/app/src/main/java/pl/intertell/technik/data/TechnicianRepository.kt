@@ -12,6 +12,8 @@ import java.io.File
 interface TechnicianRepository {
     /** Throws [ApiException] on failure (bad credentials, network error, ...). */
     suspend fun login(code: String, password: String): LoginResult
+    /** Validates the stored bearer token and returns the caller's own profile — used to resume a session on app launch. */
+    suspend fun getMe(): LoginResult
     suspend fun logout()
 
     suspend fun getTasks(): List<Job>
@@ -43,6 +45,9 @@ interface TechnicianRepository {
      * error.
      */
     suspend fun getInfrastructureStyle(): Map<String, LayerStyle>
+
+    /** Throws [ApiException] (400/401) if currentPassword doesn't match or newPassword is too short. */
+    suspend fun changePassword(currentPassword: String, newPassword: String)
 }
 
 data class InfrastructureMap(val file: File, val layers: List<String>)

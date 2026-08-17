@@ -104,7 +104,7 @@ fun CustomerScreen(viewModel: TechnicianViewModel) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(18.dp))
-                .background(IntertellColors.White),
+                .background(IntertellColors.Surface),
         ) {
             c.devices.forEachIndexed { index, d ->
                 Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {
@@ -140,7 +140,7 @@ fun CustomerScreen(viewModel: TechnicianViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(18.dp))
-                    .background(IntertellColors.White),
+                    .background(IntertellColors.Surface),
             ) {
                 c.history.forEachIndexed { index, h ->
                     Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp)) {

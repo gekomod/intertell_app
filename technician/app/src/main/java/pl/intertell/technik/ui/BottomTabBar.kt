@@ -9,9 +9,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Assignment
 import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Logout
 import androidx.compose.material.icons.filled.Map
 import androidx.compose.material.icons.filled.People
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -32,14 +32,14 @@ fun BottomTabBar(screen: TechScreen, viewModel: TechnicianViewModel) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(IntertellColors.White.copy(alpha = 0.94f))
+            .background(IntertellColors.Surface.copy(alpha = 0.94f))
             .padding(top = 10.dp, bottom = 24.dp, start = 8.dp, end = 8.dp),
     ) {
         TabItem("Zlecenia", Icons.Default.Assignment, screen in jobsGroup, Modifier.weight(1f), onClick = viewModel::goJobs)
         TabItem("Klienci", Icons.Default.People, screen in searchGroup, Modifier.weight(1f), onClick = viewModel::goSearch)
         TabItem("QGIS", Icons.Default.Map, screen == TechScreen.QGIS, Modifier.weight(1f), onClick = viewModel::goQgis)
         TabItem("Zespół", Icons.Default.Groups, screen == TechScreen.ADMIN, Modifier.weight(1f), onClick = viewModel::goAdmin)
-        TabItem("Wyloguj", Icons.Default.Logout, false, Modifier.weight(1f), onClick = viewModel::logout)
+        TabItem("Ustawienia", Icons.Default.Settings, screen == TechScreen.SETTINGS, Modifier.weight(1f), onClick = viewModel::goSettings)
     }
 }
 

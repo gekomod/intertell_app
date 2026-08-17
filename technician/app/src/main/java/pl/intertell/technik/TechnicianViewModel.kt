@@ -30,6 +30,7 @@ import pl.intertell.technik.data.geo.NominatimGeocoder
 import pl.intertell.technik.data.geo.OsrmRouter
 import pl.intertell.technik.data.geo.RouteInfo
 import pl.intertell.technik.notifications.TaskPollWorker
+import pl.intertell.technik.ui.theme.ThemeMode
 import pl.intertell.technik.update.DownloadProgress
 import pl.intertell.technik.update.UpdateChecker
 import pl.intertell.technik.update.UpdateInfo
@@ -94,6 +95,9 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
     private val _infrastructureStyles = MutableStateFlow<Map<String, LayerStyle>>(emptyMap())
     val infrastructureStyles: StateFlow<Map<String, LayerStyle>> = _infrastructureStyles.asStateFlow()
 
+    private val _themeMode = MutableStateFlow(ThemeMode.SYSTEM)
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
     private var searchJob: CoroutineJob? = null
 
     init {
@@ -101,7 +105,25 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
             _uiState.update { it.copy(serverUrl = apiRepository.serverConfig.getBaseUrl()) }
         }
         viewModelScope.launch {
+            _themeMode.value = apiRepository.serverConfig.getThemeMode()
+        }
+        viewModelScope.launch {
+            _uiState.update { it.copy(biometricEnabled = apiRepository.serverConfig.getBiometricEnabled()) }
+        }
+        viewModelScope.launch {
             _updateAvailable.value = runCatching { UpdateChecker.checkForUpdate(BuildConfig.BUILD_NUMBER) }.getOrNull()
+        }
+        // No splash screen in this app — the stored-session check just runs
+        // immediately; LoginScreen shows a bare spinner (state.checkingSession)
+        // until it resolves, so the login form doesn't flash before a
+        // resumed/biometric-gated session jumps straight to Jobs.
+        viewModelScope.launch {
+            val hasToken = !apiRepository.serverConfig.getToken().isNullOrBlank()
+            when {
+                !hasToken -> _uiState.update { it.copy(checkingSession = false) }
+                apiRepository.serverConfig.getBiometricEnabled() -> _uiState.update { it.copy(awaitingBiometric = true) }
+                else -> resumeSession()
+            }
         }
         // Foreground top-up for TaskPollWorker's 15-minute floor (an
         // Android WorkManager periodic-work limit, not tunable) — while the
@@ -174,8 +196,67 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
         _infrastructureError.value = null
         _visibleInfrastructureLayers.value = emptySet()
         _infrastructureStyles.value = emptyMap()
-        _uiState.update { TechnicianUiState(serverUrl = it.serverUrl) }
+        // biometricEnabled is a standing preference, not session state —
+        // carried over so logging back in doesn't silently turn it off.
+        _uiState.update { TechnicianUiState(serverUrl = it.serverUrl, checkingSession = false, biometricEnabled = it.biometricEnabled) }
     }
+
+    /** Validates the stored token and, if it's still good, jumps straight to Jobs. Falls back to a fresh login otherwise. */
+    private fun resumeSession() {
+        viewModelScope.launch {
+            try {
+                val result = repository.getMe()
+                _me.value = result.technician
+                _officePhone.value = result.officePhone
+                _uiState.update { it.copy(screen = TechScreen.JOBS, checkingSession = false) }
+                refreshTasks()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                apiRepository.serverConfig.setToken(null)
+                _uiState.update { it.copy(checkingSession = false, loginError = "Sesja wygasła — zaloguj się ponownie.") }
+            }
+        }
+    }
+
+    /** Called by MainActivity once the OS biometric prompt (triggered by awaitingBiometric) resolves. */
+    fun onBiometricSuccess() {
+        _uiState.update { it.copy(awaitingBiometric = false) }
+        resumeSession()
+    }
+
+    fun onBiometricFailed() {
+        _uiState.update { it.copy(awaitingBiometric = false, checkingSession = false) }
+    }
+
+    fun toggleBiometric() {
+        val enabled = !_uiState.value.biometricEnabled
+        _uiState.update { it.copy(biometricEnabled = enabled) }
+        viewModelScope.launch { apiRepository.serverConfig.setBiometricEnabled(enabled) }
+    }
+
+    fun setThemeMode(mode: ThemeMode) {
+        _themeMode.value = mode
+        viewModelScope.launch { apiRepository.serverConfig.setThemeMode(mode) }
+    }
+
+    fun changePassword(currentPassword: String, newPassword: String) {
+        if (_uiState.value.passwordChangeInFlight) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(passwordChangeInFlight = true, passwordChangeError = null) }
+            try {
+                repository.changePassword(currentPassword, newPassword)
+                _uiState.update { it.copy(passwordChangeDone = true) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.update { it.copy(passwordChangeError = e.message) }
+            }
+            _uiState.update { it.copy(passwordChangeInFlight = false) }
+        }
+    }
+
+    fun clearPasswordChangeDone() = _uiState.update { it.copy(passwordChangeDone = false, passwordChangeError = null) }
 
     fun goJobs() = navigate(TechScreen.JOBS).also { refreshTasks() }
     fun goAdmin() = navigate(TechScreen.ADMIN).also { refreshTeam() }
@@ -187,6 +268,7 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
     fun goCust() = navigate(TechScreen.CUST)
     fun goJob() = navigate(TechScreen.JOB)
     fun goQgis() = navigate(TechScreen.QGIS).also { loadInfrastructure() }
+    fun goSettings() = navigate(TechScreen.SETTINGS)
 
     private fun loadInfrastructure() {
         if (_infrastructureGeoJson.value?.file?.exists() == true) return // loaded once per session — the network map doesn't change minute to minute

@@ -8,25 +8,32 @@ import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.provider.Settings
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
+import pl.intertell.technik.auth.authenticateBiometric
 import pl.intertell.technik.crash.CrashHandler
 import pl.intertell.technik.crash.CrashScreen
 import pl.intertell.technik.ui.IntertellTechnikApp
 import pl.intertell.technik.ui.theme.IntertellColors
 import pl.intertell.technik.ui.theme.IntertellTheme
 
-class MainActivity : ComponentActivity() {
+// FragmentActivity (not plain ComponentActivity) — androidx.biometric.BiometricPrompt
+// requires it (see auth/BiometricAuth.kt). FragmentActivity is itself a
+// ComponentActivity, so viewModels()/setContent/registerForActivityResult
+// below are unaffected.
+class MainActivity : FragmentActivity() {
 
     private val viewModel: TechnicianViewModel by viewModels()
 
@@ -44,7 +51,25 @@ class MainActivity : ComponentActivity() {
         val lastCrash = CrashHandler.readAndClearLastCrash(this)
         setContent {
             var crashText by remember { mutableStateOf(lastCrash) }
-            IntertellTheme {
+            val themeMode by viewModel.themeMode.collectAsState()
+            val uiState by viewModel.uiState.collectAsState()
+
+            // Fires once each time awaitingBiometric flips true (a stored
+            // session exists and the technician opted into biometric
+            // unlock — see TechnicianViewModel's init) — shows the OS
+            // fingerprint/face prompt and routes the result back into the
+            // ViewModel, which decides where to navigate from there.
+            LaunchedEffect(uiState.awaitingBiometric) {
+                if (uiState.awaitingBiometric) {
+                    authenticateBiometric(
+                        activity = this@MainActivity,
+                        onSuccess = viewModel::onBiometricSuccess,
+                        onError = viewModel::onBiometricFailed,
+                    )
+                }
+            }
+
+            IntertellTheme(themeMode = themeMode) {
                 Surface(modifier = Modifier.fillMaxSize(), color = IntertellColors.AppBackground) {
                     val crash = crashText
                     if (crash != null) {

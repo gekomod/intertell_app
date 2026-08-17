@@ -56,7 +56,7 @@ fun SearchScreen(viewModel: TechnicianViewModel) {
                 .fillMaxWidth()
                 .padding(top = 16.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(IntertellColors.White)
+                .background(IntertellColors.Surface)
                 .padding(horizontal = 16.dp, vertical = 14.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
@@ -133,7 +133,7 @@ fun SearchScreen(viewModel: TechnicianViewModel) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(16.dp))
-                    .background(IntertellColors.White),
+                    .background(IntertellColors.Surface),
             ) {
                 result.lmsOnly.forEach { match ->
                     Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 13.dp)) {

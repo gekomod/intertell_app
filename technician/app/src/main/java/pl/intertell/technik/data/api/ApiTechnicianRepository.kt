@@ -38,6 +38,17 @@ class ApiTechnicianRepository(context: Context) : TechnicianRepository {
         )
     }
 
+    // Same response shape as login() (technician + office_phone) — used to
+    // both validate a stored token is still good and repopulate `me` when
+    // resuming a session without the technician re-entering credentials.
+    override suspend fun getMe(): LoginResult {
+        val response = api.get("/api/tech/me")
+        return LoginResult(
+            technician = response.getJSONObject("technician").toTeamMember(),
+            officePhone = response.optString("office_phone"),
+        )
+    }
+
     override suspend fun logout() {
         runCatching { api.post("/api/tech/logout") }
         api.serverConfig.setToken(null)
@@ -138,6 +149,13 @@ class ApiTechnicianRepository(context: Context) : TechnicianRepository {
             )
         }
         return out
+    }
+
+    override suspend fun changePassword(currentPassword: String, newPassword: String) {
+        api.post(
+            "/api/tech/me/password",
+            JSONObject().put("current_password", currentPassword).put("new_password", newPassword),
+        )
     }
 }
 

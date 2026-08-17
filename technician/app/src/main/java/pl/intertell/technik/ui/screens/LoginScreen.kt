@@ -37,6 +37,16 @@ fun LoginScreen(viewModel: TechnicianViewModel, state: TechnicianUiState) {
     var code by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
+    if (state.checkingSession) {
+        // A stored session is being resumed (or is gated behind a biometric
+        // prompt shown by MainActivity) — don't flash the login form while
+        // that's still being decided.
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator(color = IntertellColors.Accent)
+        }
+        return
+    }
+
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(R.drawable.technik),
