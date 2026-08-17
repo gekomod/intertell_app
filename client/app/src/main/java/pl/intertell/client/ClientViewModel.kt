@@ -18,6 +18,7 @@ import pl.intertell.client.data.Invoice
 import pl.intertell.client.data.Plan
 import pl.intertell.client.data.ServiceStatus
 import pl.intertell.client.data.api.ApiIntertellRepository
+import pl.intertell.client.notifications.ClientPollWorker
 import pl.intertell.client.update.DownloadProgress
 import pl.intertell.client.update.UpdateChecker
 import pl.intertell.client.update.UpdateInfo
@@ -69,6 +70,20 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
             delay(1600)
             if (_uiState.value.screen == ClientScreen.SPLASH) {
                 _uiState.update { it.copy(screen = ClientScreen.LOGIN) }
+            }
+        }
+        // Foreground top-up for ClientPollWorker's 15-minute floor (an
+        // Android WorkManager periodic-work limit, not tunable) — while the
+        // app process is alive, check for new invoices/ticket updates much
+        // more often so notifications don't feel delayed. Cancelled
+        // automatically with this ViewModel; the 15-minute worker still
+        // covers the app being fully closed/killed.
+        viewModelScope.launch {
+            while (true) {
+                delay(60_000)
+                if (!apiRepository.serverConfig.getToken().isNullOrBlank()) {
+                    runCatching { ClientPollWorker.checkOnce(getApplication()) }
+                }
             }
         }
     }
@@ -146,7 +161,12 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
                 val (acc, status) = repository.getAccountAndStatus()
                 _account.value = acc
                 _serviceStatus.value = status
-                _invoices.value = repository.getInvoices()
+                val invoices = repository.getInvoices()
+                _invoices.value = invoices
+                // Seen live on Home — the poller shouldn't notify about
+                // these later just because it polls next (mirrors the
+                // technician app's refreshTasks()).
+                apiRepository.serverConfig.addSeenInvoiceIds(invoices.map { it.id.toString() })
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -160,7 +180,9 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             _uiState.update { it.copy(invoicesLoading = true, errorMessage = null) }
             try {
-                _invoices.value = repository.getInvoices()
+                val invoices = repository.getInvoices()
+                _invoices.value = invoices
+                apiRepository.serverConfig.addSeenInvoiceIds(invoices.map { it.id.toString() })
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

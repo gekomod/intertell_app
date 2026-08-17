@@ -13,6 +13,7 @@ import pl.intertell.client.data.Plan
 import pl.intertell.client.data.PlanChangeResult
 import pl.intertell.client.data.PlanDirection
 import pl.intertell.client.data.ServiceStatus
+import pl.intertell.client.data.Ticket
 
 class ApiIntertellRepository(context: Context) : IntertellRepository {
     private val api = ApiClient(context)
@@ -31,6 +32,7 @@ class ApiIntertellRepository(context: Context) : IntertellRepository {
     override suspend fun logout() {
         runCatching { api.post("/api/client/logout") }
         api.serverConfig.setToken(null)
+        api.serverConfig.clearNotificationState()
     }
 
     override suspend fun getAccountAndStatus(): Pair<Account, ServiceStatus> {
@@ -75,6 +77,14 @@ class ApiIntertellRepository(context: Context) : IntertellRepository {
             ?.optLong("price_cents") ?: 0L
         return plans.map { it.toPlan(currentPriceCents) }
     }
+
+    override suspend fun getTickets(): List<Ticket> =
+        api.get("/api/client/tickets").optJSONArrayOrEmpty("tickets").map {
+            Ticket(
+                id = it.getLong("id"), number = it.optString("number"), subject = it.optString("subject"),
+                status = it.optString("status"), statusLabel = it.optString("status_label"),
+            )
+        }
 
     override suspend fun changePlan(planId: Long): PlanChangeResult {
         val response = api.post("/api/client/plan", JSONObject().put("plan_id", planId))

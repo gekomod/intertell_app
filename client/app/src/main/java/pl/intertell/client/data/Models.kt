@@ -49,6 +49,20 @@ data class DmzSettings(
     val publicIp: String,
 )
 
+/**
+ * Minimal view of a customer-portal ticket ("Zgłoszenia") — just enough to
+ * detect a BOK status change for notifications (see notifications/). The
+ * client app has no dedicated tickets list screen yet, so this isn't shown
+ * anywhere directly.
+ */
+data class Ticket(
+    val id: Long,
+    val number: String,
+    val subject: String,
+    val status: String,
+    val statusLabel: String,
+)
+
 /** One turn of the "Czat z BOK" AI assistant conversation — role is "user" or "assistant". */
 data class ChatMessage(
     val role: String,

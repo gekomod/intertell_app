@@ -3,6 +3,7 @@ package pl.intertell.client.data.api
 import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -36,6 +37,39 @@ class ServerConfig(private val context: Context) {
     suspend fun setToken(token: String?) {
         context.dataStore.edit {
             if (token == null) it.remove(tokenKey) else it[tokenKey] = token
+        }
+    }
+
+    // --- Notification bookkeeping for the invoice/ticket poller (see
+    // notifications/) — mirrors the technician app's seen-task keys.
+    // Invoice ids already notified about (or already loaded on the Home
+    // screen, which counts as "seen" the same way). Ticket entries are
+    // "id:status" pairs — the poller diffs the current status against the
+    // last-known one per id to catch a BOK reply/status change.
+    private val seenInvoiceIdsKey = stringSetPreferencesKey("seen_invoice_ids")
+    private val ticketStatusKey = stringSetPreferencesKey("ticket_status_snapshot")
+
+    suspend fun getSeenInvoiceIds(): Set<String> =
+        context.dataStore.data.map { it[seenInvoiceIdsKey] ?: emptySet() }.first()
+
+    suspend fun addSeenInvoiceIds(ids: Collection<String>) {
+        if (ids.isEmpty()) return
+        context.dataStore.edit { prefs ->
+            prefs[seenInvoiceIdsKey] = (prefs[seenInvoiceIdsKey] ?: emptySet()) + ids
+        }
+    }
+
+    suspend fun getTicketStatusSnapshot(): Set<String> =
+        context.dataStore.data.map { it[ticketStatusKey] ?: emptySet() }.first()
+
+    suspend fun setTicketStatusSnapshot(pairs: Collection<String>) {
+        context.dataStore.edit { it[ticketStatusKey] = pairs.toSet() }
+    }
+
+    suspend fun clearNotificationState() {
+        context.dataStore.edit {
+            it.remove(seenInvoiceIdsKey)
+            it.remove(ticketStatusKey)
         }
     }
 }

@@ -26,6 +26,7 @@ import pl.intertell.technik.data.geo.LatLng
 import pl.intertell.technik.data.geo.NominatimGeocoder
 import pl.intertell.technik.data.geo.OsrmRouter
 import pl.intertell.technik.data.geo.RouteInfo
+import pl.intertell.technik.notifications.TaskPollWorker
 import pl.intertell.technik.update.DownloadProgress
 import pl.intertell.technik.update.UpdateChecker
 import pl.intertell.technik.update.UpdateInfo
@@ -82,6 +83,20 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
         }
         viewModelScope.launch {
             _updateAvailable.value = runCatching { UpdateChecker.checkForUpdate(BuildConfig.BUILD_NUMBER) }.getOrNull()
+        }
+        // Foreground top-up for TaskPollWorker's 15-minute floor (an
+        // Android WorkManager periodic-work limit, not tunable) — while the
+        // app process is alive, check for new zlecenia much more often so
+        // notifications don't feel delayed. Cancelled automatically with
+        // this ViewModel; the 15-minute worker still covers the app being
+        // fully closed/killed.
+        viewModelScope.launch {
+            while (true) {
+                delay(60_000)
+                if (!apiRepository.serverConfig.getToken().isNullOrBlank()) {
+                    runCatching { TaskPollWorker.checkOnce(getApplication()) }
+                }
+            }
         }
     }
 

@@ -22,6 +22,9 @@ interface IntertellRepository {
 
     suspend fun getPlans(): List<Plan>
 
+    /** Used only for the notification poller's BOK-status-change check — see notifications/. */
+    suspend fun getTickets(): List<Ticket>
+
     /**
      * Requests a plan change. Self-service changes are limited to once
      * every 30 days server-side — outside that window an upgrade is
