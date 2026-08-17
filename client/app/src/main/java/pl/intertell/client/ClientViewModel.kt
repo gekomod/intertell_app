@@ -71,12 +71,19 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
             _themeMode.value = apiRepository.serverConfig.getThemeMode()
         }
         viewModelScope.launch {
+            _uiState.update { it.copy(biometricEnabled = apiRepository.serverConfig.getBiometricEnabled()) }
+        }
+        viewModelScope.launch {
             _updateAvailable.value = runCatching { UpdateChecker.checkForUpdate(BuildConfig.BUILD_NUMBER) }.getOrNull()
         }
         viewModelScope.launch {
             delay(1600)
-            if (_uiState.value.screen == ClientScreen.SPLASH) {
-                _uiState.update { it.copy(screen = ClientScreen.LOGIN) }
+            if (_uiState.value.screen != ClientScreen.SPLASH) return@launch
+            val hasToken = !apiRepository.serverConfig.getToken().isNullOrBlank()
+            when {
+                !hasToken -> _uiState.update { it.copy(screen = ClientScreen.LOGIN) }
+                apiRepository.serverConfig.getBiometricEnabled() -> _uiState.update { it.copy(awaitingBiometric = true) }
+                else -> resumeSession()
             }
         }
         // Foreground top-up for ClientPollWorker's 15-minute floor (an
@@ -147,7 +154,41 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
         // Explicit LOGIN, not the ClientUiState() default (SPLASH) — the
         // splash→login timer in init{} only ever fires once at app startup,
         // so resetting to its default screen left logout stuck on Splash.
-        _uiState.update { ClientUiState(serverUrl = it.serverUrl, screen = ClientScreen.LOGIN) }
+        // biometricEnabled is a standing preference, not session state —
+        // carried over so logging back in doesn't silently turn it off.
+        _uiState.update { ClientUiState(serverUrl = it.serverUrl, screen = ClientScreen.LOGIN, biometricEnabled = it.biometricEnabled) }
+    }
+
+    /** Validates the stored token and, if it's still good, jumps straight to Home. Falls back to a fresh login otherwise. */
+    private fun resumeSession() {
+        viewModelScope.launch {
+            try {
+                repository.getAccountAndStatus() // just a validity check — loadHome() below does the real state population
+                _uiState.update { it.copy(screen = ClientScreen.HOME) }
+                loadHome()
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                apiRepository.serverConfig.setToken(null)
+                _uiState.update { it.copy(screen = ClientScreen.LOGIN, loginError = "Sesja wygasła — zaloguj się ponownie.") }
+            }
+        }
+    }
+
+    /** Called by MainActivity once the OS biometric prompt (triggered by awaitingBiometric) resolves. */
+    fun onBiometricSuccess() {
+        _uiState.update { it.copy(awaitingBiometric = false) }
+        resumeSession()
+    }
+
+    fun onBiometricFailed() {
+        _uiState.update { it.copy(awaitingBiometric = false, screen = ClientScreen.LOGIN) }
+    }
+
+    fun toggleBiometric() {
+        val enabled = !_uiState.value.biometricEnabled
+        _uiState.update { it.copy(biometricEnabled = enabled) }
+        viewModelScope.launch { apiRepository.serverConfig.setBiometricEnabled(enabled) }
     }
 
     fun goHome() = navigate(ClientScreen.HOME).also { loadHome() }

@@ -94,6 +94,10 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
     implementation("androidx.lifecycle:lifecycle-viewmodel-ktx:2.8.4")
     implementation("androidx.activity:activity-compose:1.9.1")
+    // MainActivity is a FragmentActivity (required by BiometricPrompt, see
+    // auth/BiometricAuth.kt) — fragment-ktx pulls that in.
+    implementation("androidx.fragment:fragment-ktx:1.8.2")
+    implementation("androidx.biometric:biometric:1.1.0")
 
     val composeBom = platform("androidx.compose:compose-bom:2024.06.00")
     implementation(composeBom)

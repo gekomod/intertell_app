@@ -19,13 +19,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import pl.intertell.client.ClientUiState
 import pl.intertell.client.ClientViewModel
+import pl.intertell.client.auth.isBiometricAvailable
 import pl.intertell.client.ui.components.Card
 import pl.intertell.client.ui.components.OutlineButton
 import pl.intertell.client.ui.components.ToggleSwitch
@@ -39,6 +42,8 @@ fun SettingsScreen(viewModel: ClientViewModel, state: ClientUiState) {
     val status by viewModel.serviceStatus.collectAsState()
     val dmz by viewModel.dmz.collectAsState()
     val themeMode by viewModel.themeMode.collectAsState()
+    val context = LocalContext.current
+    val biometricAvailable = remember { isBiometricAvailable(context) }
 
     Column(
         modifier = Modifier
@@ -75,7 +80,16 @@ fun SettingsScreen(viewModel: ClientViewModel, state: ClientUiState) {
         ) {
             ToggleRow("e-Faktura", "Faktury tylko elektronicznie", state.eFakturaOnly, viewModel::toggleEFaktura, divider = true)
             ToggleRow("Powiadomienia push", null, state.pushNotifications, viewModel::togglePush, divider = true)
-            ToggleRow("SMS o awariach", null, state.smsAlerts, viewModel::toggleSms, divider = false)
+            ToggleRow("SMS o awariach", null, state.smsAlerts, viewModel::toggleSms, divider = biometricAvailable)
+            if (biometricAvailable) {
+                ToggleRow(
+                    "Logowanie odciskiem palca",
+                    "Szybszy dostęp bez wpisywania hasła",
+                    state.biometricEnabled,
+                    viewModel::toggleBiometric,
+                    divider = false,
+                )
+            }
         }
 
         Column(

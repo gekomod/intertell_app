@@ -26,6 +26,11 @@ data class ClientUiState(
     val eFakturaOnly: Boolean = true,
     val pushNotifications: Boolean = true,
     val smsAlerts: Boolean = false,
+    // Persisted via ServerConfig; awaitingBiometric is a one-shot signal for
+    // MainActivity to show the OS fingerprint/face prompt while a stored
+    // session is being resumed (see ClientViewModel's splash-time logic).
+    val biometricEnabled: Boolean = false,
+    val awaitingBiometric: Boolean = false,
 ) {
     val showBottomBar: Boolean get() = screen != ClientScreen.LOGIN && screen != ClientScreen.SPLASH
     val showPlanSheet: Boolean get() = sheetPlanId != null && !planChangeDone

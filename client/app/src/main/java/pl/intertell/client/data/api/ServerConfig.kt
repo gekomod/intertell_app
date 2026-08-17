@@ -1,6 +1,7 @@
 package pl.intertell.client.data.api
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -83,5 +84,14 @@ class ServerConfig(private val context: Context) {
 
     suspend fun setThemeMode(mode: ThemeMode) {
         context.dataStore.edit { it[themeModeKey] = mode.name }
+    }
+
+    private val biometricEnabledKey = booleanPreferencesKey("biometric_enabled")
+
+    suspend fun getBiometricEnabled(): Boolean =
+        context.dataStore.data.map { it[biometricEnabledKey] ?: false }.first()
+
+    suspend fun setBiometricEnabled(enabled: Boolean) {
+        context.dataStore.edit { it[biometricEnabledKey] = enabled }
     }
 }
