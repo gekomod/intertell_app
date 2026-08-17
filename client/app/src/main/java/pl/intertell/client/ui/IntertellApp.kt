@@ -1,5 +1,6 @@
 package pl.intertell.client.ui
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -41,11 +42,35 @@ import pl.intertell.client.ui.screens.SplashScreen
 import pl.intertell.client.ui.theme.IntertellColors
 import pl.intertell.client.ui.theme.IntertellType
 
+// System back button/gesture exits the app by default on any screen (there's
+// no Fragment/Navigation-Compose backstack here, just a flat `screen` field)
+// — these are the only screens where that default is actually correct.
+// Everywhere else the BackHandler below steps back one level instead,
+// mirroring each screen's own on-screen "←" link.
+private val rootScreens = setOf(ClientScreen.HOME, ClientScreen.LOGIN, ClientScreen.SPLASH)
+
 @Composable
 fun IntertellApp(viewModel: ClientViewModel) {
     val state by viewModel.uiState.collectAsState()
     val update by viewModel.updateAvailable.collectAsState()
     val downloadProgress by viewModel.downloadProgress.collectAsState()
+
+    val overlayShowing = state.ticketSent || state.planChangeDone || state.resetSheetOpen || state.showPlanSheet
+    BackHandler(enabled = overlayShowing || state.screen !in rootScreens) {
+        when {
+            state.ticketSent -> viewModel.closeTicketSent()
+            state.planChangeDone -> viewModel.closeDone()
+            state.resetSheetOpen -> viewModel.closeReset()
+            state.showPlanSheet -> viewModel.closeSheet()
+            else -> when (state.screen) {
+                ClientScreen.INVOICE -> viewModel.goInvoices()
+                ClientScreen.CONTACT, ClientScreen.CONTRACTS, ClientScreen.DMZ -> viewModel.goSettings()
+                ClientScreen.CHAT -> viewModel.goContact()
+                ClientScreen.INVOICES, ClientScreen.PLAN, ClientScreen.SETTINGS -> viewModel.goHome()
+                else -> Unit // HOME/LOGIN/SPLASH — excluded via `enabled` above, unreachable
+            }
+        }
+    }
 
     update?.let {
         UpdateDialog(update = it, onDismiss = viewModel::dismissUpdate, onInstall = viewModel::startUpdateDownload)
