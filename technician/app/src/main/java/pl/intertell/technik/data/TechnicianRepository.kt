@@ -1,5 +1,7 @@
 package pl.intertell.technik.data
 
+import java.io.File
+
 /**
  * Everything the UI needs from the intratell backend's technician API
  * (see the server's internal/handlers/api_tech.go and
@@ -23,8 +25,14 @@ interface TechnicianRepository {
     suspend fun updateTechnician(id: Long, name: String, phone: String, specialization: String, active: Boolean): TeamMember
     suspend fun deleteTechnician(id: Long)
 
-    /** Raw GeoJSON FeatureCollection text (fiber runs, cabinets, distribution points) — see server's internal/qfield. */
-    suspend fun getInfrastructureGeoJson(): String
+    /**
+     * Downloads the GeoJSON FeatureCollection (fiber runs, cabinets,
+     * distribution points — see server's internal/qfield) straight to a
+     * local file and returns it, rather than a String — even a
+     * post-compression few-MB payload is enough to OOM-crash the app if it's
+     * round-tripped through a Java String/JSONObject first.
+     */
+    suspend fun getInfrastructureGeoJson(): File
 }
 
 class ApiException(message: String, val httpStatus: Int = 0) : Exception(message)

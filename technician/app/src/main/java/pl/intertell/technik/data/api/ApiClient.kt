@@ -1,6 +1,8 @@
 package pl.intertell.technik.data.api
 
 import android.content.Context
+import java.io.File
+import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlinx.coroutines.CancellationException
@@ -38,6 +40,53 @@ class ApiClient(context: Context) {
     suspend fun post(path: String, body: JSONObject? = null): JSONObject = execute("POST", path, body, 15)
     suspend fun put(path: String, body: JSONObject): JSONObject = execute("PUT", path, body, 15)
     suspend fun delete(path: String): JSONObject = execute("DELETE", path, null, 15)
+
+    /**
+     * Streams a GET response straight to [destFile] instead of materializing
+     * it as a Java String/JSONObject first — for large payloads (the QField
+     * infrastructure map can be tens of MB of GeoJSON) that round trip was
+     * enough to OOM-crash the app on its own, well before MapLibre even got
+     * to render anything. Overwrites [destFile] on success only, so a failed
+     * download never leaves a truncated file behind for a later read to trip
+     * over.
+     */
+    suspend fun getToFile(path: String, destFile: File, readTimeoutSeconds: Long = 15): Unit =
+        withContext(Dispatchers.IO) {
+            try {
+                val baseUrl = config.getBaseUrl()
+                val token = config.getToken()
+                val requestBuilder = Request.Builder().url(baseUrl + path)
+                if (!token.isNullOrBlank()) {
+                    requestBuilder.header("Authorization", "Bearer $token")
+                }
+                val client = if (readTimeoutSeconds == 15L) http else http.newBuilder().readTimeout(readTimeoutSeconds, TimeUnit.SECONDS).build()
+                val response = client.newCall(requestBuilder.build()).execute()
+                response.use {
+                    if (!it.isSuccessful) {
+                        val text = it.body?.string().orEmpty()
+                        val message = runCatching { JSONObject(text).optString("error") }
+                            .getOrNull()?.takeIf { m -> m.isNotBlank() }
+                            ?: "Błąd serwera (${it.code})."
+                        throw ApiException(message, it.code)
+                    }
+                    val tmpFile = File(destFile.parentFile, "${destFile.name}.tmp")
+                    it.body?.byteStream()?.use { input ->
+                        FileOutputStream(tmpFile).use { output -> input.copyTo(output) }
+                    } ?: throw ApiException("Pusta odpowiedź serwera.")
+                    if (!tmpFile.renameTo(destFile)) {
+                        throw ApiException("Nie udało się zapisać pobranego pliku.")
+                    }
+                }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: ApiException) {
+                throw e
+            } catch (e: IOException) {
+                throw ApiException("Brak połączenia z serwerem (${config.getBaseUrl()}).")
+            } catch (e: Exception) {
+                throw ApiException("Nieprawidłowa odpowiedź serwera z ${config.getBaseUrl()} — sprawdź czy to właściwy adres i czy backend jest zaktualizowany.")
+            }
+        }
 
     // Every failure mode below — bad network, wrong base URL, a route that
     // doesn't exist yet on an outdated server (plain-text 404, not JSON),

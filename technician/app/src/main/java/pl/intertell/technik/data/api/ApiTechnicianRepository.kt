@@ -1,6 +1,7 @@
 package pl.intertell.technik.data.api
 
 import android.content.Context
+import java.io.File
 import org.json.JSONObject
 import pl.intertell.technik.data.Customer
 import pl.intertell.technik.data.CustomerSearchResult
@@ -17,6 +18,7 @@ import pl.intertell.technik.data.TeamMember
 import pl.intertell.technik.data.TechnicianRepository
 
 class ApiTechnicianRepository(context: Context) : TechnicianRepository {
+    private val appContext = context.applicationContext
     private val api = ApiClient(context)
     val serverConfig: ServerConfig get() = api.serverConfig
 
@@ -102,8 +104,15 @@ class ApiTechnicianRepository(context: Context) : TechnicianRepository {
     // internal/qfield), which can genuinely take longer than a normal JSON
     // endpoint. Once cached server-side (10 min TTL), later calls return
     // quickly well within this window regardless.
-    override suspend fun getInfrastructureGeoJson(): String =
-        api.get("/api/tech/infrastruktura", readTimeoutSeconds = 60).toString()
+    //
+    // Streamed straight to a file (ApiClient.getToFile) instead of read into
+    // a String — MapLibre's GeoJsonSource can load directly from a file URI,
+    // so there's no need to ever hold the payload as a Java String at all.
+    override suspend fun getInfrastructureGeoJson(): File {
+        val dest = File(appContext.cacheDir, "infrastructure.geojson")
+        api.getToFile("/api/tech/infrastruktura", dest, readTimeoutSeconds = 60)
+        return dest
+    }
 }
 
 private fun JSONObject.toTeamMember() = TeamMember(

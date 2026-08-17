@@ -5,6 +5,7 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
+import java.io.File
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -85,7 +86,7 @@ fun QgisScreen(viewModel: TechnicianViewModel) {
             contentAlignment = Alignment.Center,
         ) {
             when {
-                geoJson != null -> InfrastructureMap(geoJson = geoJson!!, modifier = Modifier.fillMaxSize())
+                geoJson != null -> InfrastructureMap(geoJsonFile = geoJson!!, modifier = Modifier.fillMaxSize())
                 loading -> CircularProgressIndicator(color = IntertellColors.Accent)
                 error != null -> Column(modifier = Modifier.padding(24.dp)) {
                     Text(
@@ -119,7 +120,7 @@ fun QgisScreen(viewModel: TechnicianViewModel) {
 }
 
 @Composable
-private fun InfrastructureMap(geoJson: String, modifier: Modifier = Modifier) {
+private fun InfrastructureMap(geoJsonFile: File, modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val mapView = remember {
@@ -150,7 +151,10 @@ private fun InfrastructureMap(geoJson: String, modifier: Modifier = Modifier) {
             val styleUrl = "https://api.maptiler.com/maps/streets-v2/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
             map.setStyle(Style.Builder().fromUri(styleUrl)) { style ->
                 if (style.getSource(INFRASTRUCTURE_SOURCE_ID) != null) return@setStyle
-                style.addSource(GeoJsonSource(INFRASTRUCTURE_SOURCE_ID, geoJson))
+                // File-URI constructor — MapLibre parses the GeoJSON off the
+                // downloaded file itself, so it's never materialized as a
+                // Java String on the way in (see ApiClient.getToFile).
+                style.addSource(GeoJsonSource(INFRASTRUCTURE_SOURCE_ID, geoJsonFile.toURI()))
                 style.addLayer(
                     LineLayer("infrastructure-lines", INFRASTRUCTURE_SOURCE_ID)
                         .withFilter(Expression.eq(Expression.geometryType(), "LineString"))

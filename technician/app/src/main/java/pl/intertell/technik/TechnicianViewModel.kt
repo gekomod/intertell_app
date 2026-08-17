@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.pm.PackageManager
 import android.location.LocationManager
 import androidx.core.content.ContextCompat
+import java.io.File
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.CancellationException
@@ -75,8 +76,8 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
     private val _downloadProgress = MutableStateFlow<DownloadProgress?>(null)
     val downloadProgress: StateFlow<DownloadProgress?> = _downloadProgress.asStateFlow()
 
-    private val _infrastructureGeoJson = MutableStateFlow<String?>(null)
-    val infrastructureGeoJson: StateFlow<String?> = _infrastructureGeoJson.asStateFlow()
+    private val _infrastructureGeoJson = MutableStateFlow<File?>(null)
+    val infrastructureGeoJson: StateFlow<File?> = _infrastructureGeoJson.asStateFlow()
 
     private val _infrastructureLoading = MutableStateFlow(false)
     val infrastructureLoading: StateFlow<Boolean> = _infrastructureLoading.asStateFlow()
@@ -177,7 +178,7 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
     fun goQgis() = navigate(TechScreen.QGIS).also { loadInfrastructure() }
 
     private fun loadInfrastructure() {
-        if (_infrastructureGeoJson.value != null) return // loaded once per session — the network map doesn't change minute to minute
+        if (_infrastructureGeoJson.value?.exists() == true) return // loaded once per session — the network map doesn't change minute to minute
         viewModelScope.launch {
             _infrastructureLoading.value = true
             try {
