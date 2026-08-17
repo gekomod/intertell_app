@@ -22,6 +22,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import pl.intertell.client.ClientUiState
 import pl.intertell.client.ClientViewModel
@@ -30,12 +31,14 @@ import pl.intertell.client.ui.components.OutlineButton
 import pl.intertell.client.ui.components.ToggleSwitch
 import pl.intertell.client.ui.theme.IntertellColors
 import pl.intertell.client.ui.theme.IntertellType
+import pl.intertell.client.ui.theme.ThemeMode
 
 @Composable
 fun SettingsScreen(viewModel: ClientViewModel, state: ClientUiState) {
     val account by viewModel.account.collectAsState()
     val status by viewModel.serviceStatus.collectAsState()
     val dmz by viewModel.dmz.collectAsState()
+    val themeMode by viewModel.themeMode.collectAsState()
 
     Column(
         modifier = Modifier
@@ -68,7 +71,7 @@ fun SettingsScreen(viewModel: ClientViewModel, state: ClientUiState) {
                 .fillMaxWidth()
                 .padding(top = 16.dp)
                 .clip(RoundedCornerShape(18.dp))
-                .background(IntertellColors.White),
+                .background(IntertellColors.Surface),
         ) {
             ToggleRow("e-Faktura", "Faktury tylko elektronicznie", state.eFakturaOnly, viewModel::toggleEFaktura, divider = true)
             ToggleRow("Powiadomienia push", null, state.pushNotifications, viewModel::togglePush, divider = true)
@@ -80,12 +83,31 @@ fun SettingsScreen(viewModel: ClientViewModel, state: ClientUiState) {
                 .fillMaxWidth()
                 .padding(top = 16.dp)
                 .clip(RoundedCornerShape(18.dp))
-                .background(IntertellColors.White),
+                .background(IntertellColors.Surface),
         ) {
             LinkRow("Umowy i regulaminy", onClick = viewModel::goContracts, divider = true)
             LinkRow("Dane do płatności", onClick = {}, divider = true)
             LinkRow("Zmień hasło w LMS", onClick = {}, divider = true)
             LinkRow("Pomoc i kontakt", onClick = viewModel::goContact, divider = false)
+        }
+
+        Text(
+            "Wygląd",
+            style = IntertellType.bodyBold,
+            color = IntertellColors.TextPrimary,
+            modifier = Modifier.padding(top = 22.dp, bottom = 12.dp),
+        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clip(RoundedCornerShape(16.dp))
+                .background(IntertellColors.Surface)
+                .padding(6.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            ThemeModeOption("Jasny", ThemeMode.LIGHT, themeMode, viewModel::setThemeMode, Modifier.weight(1f))
+            ThemeModeOption("Ciemny", ThemeMode.DARK, themeMode, viewModel::setThemeMode, Modifier.weight(1f))
+            ThemeModeOption("Automatyczny", ThemeMode.SYSTEM, themeMode, viewModel::setThemeMode, Modifier.weight(1f))
         }
 
         Text(
@@ -98,7 +120,7 @@ fun SettingsScreen(viewModel: ClientViewModel, state: ClientUiState) {
             modifier = Modifier
                 .fillMaxWidth()
                 .clip(RoundedCornerShape(18.dp))
-                .background(IntertellColors.White),
+                .background(IntertellColors.Surface),
         ) {
             Row(
                 modifier = Modifier
@@ -272,6 +294,25 @@ private fun LinkRow2(title: String, subtitle: String, trailing: String, onClick:
             }
         }
         if (divider) Divider()
+    }
+}
+
+@Composable
+private fun ThemeModeOption(label: String, mode: ThemeMode, current: ThemeMode, onSelect: (ThemeMode) -> Unit, modifier: Modifier = Modifier) {
+    val selected = mode == current
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(11.dp))
+            .background(if (selected) IntertellColors.Accent else Color.Transparent)
+            .clickable { onSelect(mode) }
+            .padding(vertical = 10.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label,
+            style = IntertellType.bodyBold,
+            color = if (selected) IntertellColors.White else IntertellColors.TextPrimary,
+        )
     }
 }
 

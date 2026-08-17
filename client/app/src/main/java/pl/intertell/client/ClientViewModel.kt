@@ -19,6 +19,7 @@ import pl.intertell.client.data.Plan
 import pl.intertell.client.data.ServiceStatus
 import pl.intertell.client.data.api.ApiIntertellRepository
 import pl.intertell.client.notifications.ClientPollWorker
+import pl.intertell.client.ui.theme.ThemeMode
 import pl.intertell.client.update.DownloadProgress
 import pl.intertell.client.update.UpdateChecker
 import pl.intertell.client.update.UpdateInfo
@@ -59,9 +60,15 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
     private val _chatMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
 
+    private val _themeMode = MutableStateFlow(ThemeMode.SYSTEM)
+    val themeMode: StateFlow<ThemeMode> = _themeMode.asStateFlow()
+
     init {
         viewModelScope.launch {
             _uiState.update { it.copy(serverUrl = apiRepository.serverConfig.getBaseUrl()) }
+        }
+        viewModelScope.launch {
+            _themeMode.value = apiRepository.serverConfig.getThemeMode()
         }
         viewModelScope.launch {
             _updateAvailable.value = runCatching { UpdateChecker.checkForUpdate(BuildConfig.BUILD_NUMBER) }.getOrNull()
@@ -349,4 +356,9 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun clearError() = _uiState.update { it.copy(errorMessage = null) }
+
+    fun setThemeMode(mode: ThemeMode) {
+        _themeMode.value = mode
+        viewModelScope.launch { apiRepository.serverConfig.setThemeMode(mode) }
+    }
 }

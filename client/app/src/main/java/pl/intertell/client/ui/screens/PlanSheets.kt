@@ -36,7 +36,7 @@ fun PlanChangeSheet(viewModel: ClientViewModel, state: ClientUiState) {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp))
-            .background(IntertellColors.White)
+            .background(IntertellColors.Surface)
             .padding(start = 22.dp, top = 24.dp, end = 22.dp, bottom = 44.dp),
     ) {
         Box(

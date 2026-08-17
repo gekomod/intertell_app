@@ -174,7 +174,7 @@ private fun QuickReplyChip(text: String, onClick: () -> Unit) {
     Box(
         modifier = Modifier
             .clip(RoundedCornerShape(20.dp))
-            .background(IntertellColors.White)
+            .background(IntertellColors.Surface)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 10.dp),
     ) {
@@ -198,7 +198,7 @@ private fun ChatBubble(msg: ChatMessage) {
             modifier = Modifier
                 .widthIn(max = 260.dp)
                 .clip(RoundedCornerShape(14.dp))
-                .background(if (isUser) IntertellColors.Accent else IntertellColors.White)
+                .background(if (isUser) IntertellColors.Accent else IntertellColors.Surface)
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
             Text(
@@ -218,7 +218,7 @@ private fun TypingBubble() {
         Box(
             modifier = Modifier
                 .clip(RoundedCornerShape(14.dp))
-                .background(IntertellColors.White)
+                .background(IntertellColors.Surface)
                 .padding(horizontal = 16.dp, vertical = 14.dp),
         ) {
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {

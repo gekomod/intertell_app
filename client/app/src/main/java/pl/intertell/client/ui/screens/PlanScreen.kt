@@ -57,7 +57,7 @@ fun PlanScreen(viewModel: ClientViewModel, state: ClientUiState) {
                     .fillMaxWidth()
                     .padding(top = 16.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(IntertellColors.White)
+                    .background(IntertellColors.Surface)
                     .border(1.5.dp, IntertellColors.Accent, RoundedCornerShape(20.dp))
                     .padding(20.dp),
             ) {

@@ -35,7 +35,7 @@ import pl.intertell.client.ui.theme.IntertellType
 @Composable
 fun Card(
     modifier: Modifier = Modifier,
-    background: Color = IntertellColors.White,
+    background: Color = IntertellColors.Surface,
     border: Color? = IntertellColors.HairlineOnLight,
     radius: Int = 18,
     padding: Int = 18,
@@ -171,7 +171,7 @@ fun LabeledTextField(
         modifier = modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(14.dp))
-            .background(IntertellColors.White)
+            .background(IntertellColors.Surface)
             .border(1.dp, IntertellColors.Navy.copy(alpha = 0.09f), RoundedCornerShape(14.dp))
             .padding(horizontal = 16.dp, vertical = 14.dp),
     ) {

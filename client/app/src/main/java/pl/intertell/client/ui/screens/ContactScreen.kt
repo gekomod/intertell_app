@@ -108,7 +108,7 @@ fun ContactScreen(viewModel: ClientViewModel, state: ClientUiState) {
                 .fillMaxWidth()
                 .padding(top = 14.dp)
                 .clip(RoundedCornerShape(18.dp))
-                .background(IntertellColors.White),
+                .background(IntertellColors.Surface),
         ) {
             ContactRow("Biuro Obsługi Klienta", "62 737 00 00") {
                 context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:627370000")))

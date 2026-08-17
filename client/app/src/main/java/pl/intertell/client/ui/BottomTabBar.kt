@@ -31,7 +31,7 @@ fun BottomTabBar(screen: ClientScreen, viewModel: ClientViewModel) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .background(IntertellColors.White.copy(alpha = 0.94f))
+            .background(IntertellColors.Surface.copy(alpha = 0.94f))
             .padding(top = 10.dp, bottom = 24.dp, start = 8.dp, end = 8.dp),
     ) {
         TabItem("Start", Icons.Default.Home, screen == ClientScreen.HOME, Modifier.weight(1f), onClick = viewModel::goHome)

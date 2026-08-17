@@ -7,6 +7,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import pl.intertell.client.ui.theme.ThemeMode
 
 private val Context.dataStore by preferencesDataStore(name = "intertell_client_prefs")
 
@@ -71,5 +72,16 @@ class ServerConfig(private val context: Context) {
             it.remove(seenInvoiceIdsKey)
             it.remove(ticketStatusKey)
         }
+    }
+
+    private val themeModeKey = stringPreferencesKey("theme_mode")
+
+    suspend fun getThemeMode(): ThemeMode =
+        context.dataStore.data.map { it[themeModeKey] }.first()
+            ?.let { raw -> runCatching { ThemeMode.valueOf(raw) }.getOrNull() }
+            ?: ThemeMode.SYSTEM
+
+    suspend fun setThemeMode(mode: ThemeMode) {
+        context.dataStore.edit { it[themeModeKey] = mode.name }
     }
 }
