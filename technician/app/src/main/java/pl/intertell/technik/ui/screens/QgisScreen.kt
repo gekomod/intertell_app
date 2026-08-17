@@ -64,6 +64,7 @@ import org.maplibre.android.style.sources.GeoJsonSource
 import pl.intertell.technik.BuildConfig
 import pl.intertell.technik.TechnicianViewModel
 import pl.intertell.technik.data.InfrastructureMap
+import pl.intertell.technik.data.LayerStyle
 import pl.intertell.technik.ui.theme.IntertellColors
 import pl.intertell.technik.ui.theme.IntertellType
 
@@ -90,6 +91,16 @@ private val LAYER_PALETTE = listOf(
 private fun colorForLayer(name: String): Int =
     Color.parseColor(LAYER_PALETTE[(name.hashCode() and Int.MAX_VALUE) % LAYER_PALETTE.size])
 
+private fun safeParseColor(hex: String?, fallback: Int): Int =
+    if (hex.isNullOrBlank()) fallback else runCatching { Color.parseColor(hex) }.getOrDefault(fallback)
+
+/** A representative single color for a table's layers-menu checkbox swatch. */
+private fun swatchColor(table: String, styles: Map<String, LayerStyle>): Int {
+    val style = styles[table]
+    val hex = style?.default ?: style?.categories?.values?.firstOrNull()
+    return safeParseColor(hex, colorForLayer(table))
+}
+
 @Composable
 fun QgisScreen(viewModel: TechnicianViewModel) {
     val context = LocalContext.current
@@ -97,6 +108,7 @@ fun QgisScreen(viewModel: TechnicianViewModel) {
     val loading by viewModel.infrastructureLoading.collectAsState()
     val error by viewModel.infrastructureError.collectAsState()
     val visibleLayers by viewModel.visibleInfrastructureLayers.collectAsState()
+    val styles by viewModel.infrastructureStyles.collectAsState()
 
     Column(
         modifier = Modifier
@@ -124,6 +136,7 @@ fun QgisScreen(viewModel: TechnicianViewModel) {
                 infrastructure != null -> InfrastructureMapView(
                     infrastructure = infrastructure!!,
                     visibleLayers = visibleLayers,
+                    styles = styles,
                     onToggleLayer = viewModel::toggleInfrastructureLayer,
                     modifier = Modifier.fillMaxSize(),
                 )
@@ -163,6 +176,7 @@ fun QgisScreen(viewModel: TechnicianViewModel) {
 private fun InfrastructureMapView(
     infrastructure: InfrastructureMap,
     visibleLayers: Set<String>,
+    styles: Map<String, LayerStyle>,
     onToggleLayer: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -210,14 +224,14 @@ private fun InfrastructureMapView(
                     style.addLayer(
                         LineLayer(LINE_LAYER_ID, INFRASTRUCTURE_SOURCE_ID)
                             .withProperties(
-                                PropertyFactory.lineColor(layerColorExpression(infrastructure.layers)),
+                                PropertyFactory.lineColor(layerColorExpression(infrastructure.layers, styles)),
                                 PropertyFactory.lineWidth(3f),
                             ),
                     )
                     style.addLayer(
                         CircleLayer(POINT_LAYER_ID, INFRASTRUCTURE_SOURCE_ID)
                             .withProperties(
-                                PropertyFactory.circleColor(layerColorExpression(infrastructure.layers)),
+                                PropertyFactory.circleColor(layerColorExpression(infrastructure.layers, styles)),
                                 PropertyFactory.circleRadius(6f),
                                 PropertyFactory.circleStrokeColor(Color.WHITE),
                                 PropertyFactory.circleStrokeWidth(2f),
@@ -283,7 +297,7 @@ private fun InfrastructureMapView(
                                 Checkbox(
                                     checked = layer in visibleLayers,
                                     onCheckedChange = { onToggleLayer(layer) },
-                                    colors = CheckboxDefaults.colors(checkedColor = ComposeColor(colorForLayer(layer))),
+                                    colors = CheckboxDefaults.colors(checkedColor = ComposeColor(swatchColor(layer, styles))),
                                 )
                                 Text(layer, style = IntertellType.bodySmall, color = IntertellColors.TextPrimary)
                             }
@@ -295,10 +309,28 @@ private fun InfrastructureMapView(
     }
 }
 
-private fun layerColorExpression(layers: List<String>): Expression {
+// Builds a per-feature color expression keyed on which GeoPackage table
+// ("layer") a feature came from — and, for a table with a categorized QGIS
+// renderer (e.g. cable capacity), a nested match on that table's own
+// attribute so QField's actual per-category coloring is reproduced instead
+// of one flat color per table.
+private fun layerColorExpression(layers: List<String>, styles: Map<String, LayerStyle>): Expression {
     if (layers.isEmpty()) return Expression.color(Color.parseColor(LAYER_PALETTE[0]))
-    val stops = layers.map { Expression.stop(it, Expression.color(colorForLayer(it))) }.toTypedArray()
-    return Expression.match(Expression.get("layer"), Expression.color(Color.parseColor(LAYER_PALETTE[0])), *stops)
+    val stops = layers.map { table -> Expression.stop(table, layerOutputExpression(table, styles)) }.toTypedArray()
+    return Expression.match(Expression.get("layer"), layerOutputExpression(layers.first(), styles), *stops)
+}
+
+private fun layerOutputExpression(table: String, styles: Map<String, LayerStyle>): Expression {
+    val style = styles[table]
+    val fallback = colorForLayer(table)
+    val field = style?.field
+    if (style != null && field != null && style.categories.isNotEmpty()) {
+        val catStops = style.categories.map { (value, hex) ->
+            Expression.stop(value, Expression.color(safeParseColor(hex, fallback)))
+        }.toTypedArray()
+        return Expression.match(Expression.get(field), Expression.color(safeParseColor(style.default, fallback)), *catStops)
+    }
+    return Expression.color(safeParseColor(style?.default, fallback))
 }
 
 // GeoPackage exports from QGIS are almost always Multi*-typed even for

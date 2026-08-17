@@ -34,8 +34,20 @@ interface TechnicianRepository {
      * underlying GeoPackage table names for a per-layer visibility toggle.
      */
     suspend fun getInfrastructureGeoJson(): InfrastructureMap
+
+    /**
+     * Per-table coloring parsed server-side from the QGIS project's own
+     * .qgs file (see server's internal/qfield/qgsproject.go), so the map can
+     * match QField's own symbology instead of a generated palette. A table
+     * missing from the result just means "no recognized renderer" — not an
+     * error.
+     */
+    suspend fun getInfrastructureStyle(): Map<String, LayerStyle>
 }
 
 data class InfrastructureMap(val file: File, val layers: List<String>)
+
+/** [default]/[categories] values are "#rrggbb" hex strings. */
+data class LayerStyle(val default: String?, val field: String?, val categories: Map<String, String>)
 
 class ApiException(message: String, val httpStatus: Int = 0) : Exception(message)

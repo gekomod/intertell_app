@@ -20,6 +20,7 @@ import pl.intertell.technik.data.Customer
 import pl.intertell.technik.data.CustomerSearchResult
 import pl.intertell.technik.data.InfrastructureMap
 import pl.intertell.technik.data.Job
+import pl.intertell.technik.data.LayerStyle
 import pl.intertell.technik.data.TeamMember
 import pl.intertell.technik.data.TechnicianRepository
 import pl.intertell.technik.data.api.ApiTechnicianRepository
@@ -88,6 +89,9 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
     /** Layer names currently shown on the QGIS map — defaults to all of them once loaded. */
     private val _visibleInfrastructureLayers = MutableStateFlow<Set<String>>(emptySet())
     val visibleInfrastructureLayers: StateFlow<Set<String>> = _visibleInfrastructureLayers.asStateFlow()
+
+    private val _infrastructureStyles = MutableStateFlow<Map<String, LayerStyle>>(emptyMap())
+    val infrastructureStyles: StateFlow<Map<String, LayerStyle>> = _infrastructureStyles.asStateFlow()
 
     private var searchJob: CoroutineJob? = null
 
@@ -168,6 +172,7 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
         _infrastructureGeoJson.value = null
         _infrastructureError.value = null
         _visibleInfrastructureLayers.value = emptySet()
+        _infrastructureStyles.value = emptyMap()
         _uiState.update { TechnicianUiState(serverUrl = it.serverUrl) }
     }
 
@@ -191,6 +196,10 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
                 _infrastructureGeoJson.value = map
                 _visibleInfrastructureLayers.value = map.layers.toSet()
                 _infrastructureError.value = null
+                // Best-effort — a missing/unparseable .qgs on the server
+                // just means generated colors instead of QGIS's own, not a
+                // reason to fail the whole map.
+                _infrastructureStyles.value = runCatching { repository.getInfrastructureStyle() }.getOrDefault(emptyMap())
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

@@ -9,6 +9,7 @@ import pl.intertell.technik.data.CustomerSearchResult
 import pl.intertell.technik.data.Device
 import pl.intertell.technik.data.InfrastructureMap
 import pl.intertell.technik.data.Job
+import pl.intertell.technik.data.LayerStyle
 import pl.intertell.technik.data.JobKind
 import pl.intertell.technik.data.LmsOnlyMatch
 import pl.intertell.technik.data.LoginResult
@@ -120,6 +121,23 @@ class ApiTechnicianRepository(context: Context) : TechnicianRepository {
             ?.filter { it.isNotBlank() }
             ?: emptyList()
         return InfrastructureMap(dest, layers)
+    }
+
+    override suspend fun getInfrastructureStyle(): Map<String, LayerStyle> {
+        val response = api.get("/api/tech/infrastruktura/style", readTimeoutSeconds = 40)
+        val out = mutableMapOf<String, LayerStyle>()
+        response.keys().forEach { table ->
+            val obj = response.getJSONObject(table)
+            val categories = obj.optJSONObject("categories")?.let { catObj ->
+                catObj.keys().asSequence().associateWith { key -> catObj.getString(key) }
+            } ?: emptyMap()
+            out[table] = LayerStyle(
+                default = obj.optString("default").ifBlank { null },
+                field = obj.optString("field").ifBlank { null },
+                categories = categories,
+            )
+        }
+        return out
     }
 }
 
