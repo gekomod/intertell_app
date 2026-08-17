@@ -157,7 +157,17 @@ private fun InfrastructureMap(geoJsonFile: File, modifier: Modifier = Modifier) 
                 style.addSource(GeoJsonSource(INFRASTRUCTURE_SOURCE_ID, geoJsonFile.toURI()))
                 style.addLayer(
                     LineLayer("infrastructure-lines", INFRASTRUCTURE_SOURCE_ID)
-                        .withFilter(Expression.eq(Expression.geometryType(), "LineString"))
+                        // GeoPackage exports from QGIS are almost always
+                        // Multi*-typed even for single-part features, so a
+                        // filter on bare "LineString" alone silently matches
+                        // nothing — the whole infrastructure layer rendered
+                        // invisibly for that reason.
+                        .withFilter(
+                            Expression.any(
+                                Expression.eq(Expression.geometryType(), "LineString"),
+                                Expression.eq(Expression.geometryType(), "MultiLineString"),
+                            ),
+                        )
                         .withProperties(
                             PropertyFactory.lineColor(Color.parseColor("#0E86C4")),
                             PropertyFactory.lineWidth(3f),
@@ -165,7 +175,12 @@ private fun InfrastructureMap(geoJsonFile: File, modifier: Modifier = Modifier) 
                 )
                 style.addLayer(
                     CircleLayer("infrastructure-points", INFRASTRUCTURE_SOURCE_ID)
-                        .withFilter(Expression.eq(Expression.geometryType(), "Point"))
+                        .withFilter(
+                            Expression.any(
+                                Expression.eq(Expression.geometryType(), "Point"),
+                                Expression.eq(Expression.geometryType(), "MultiPoint"),
+                            ),
+                        )
                         .withProperties(
                             PropertyFactory.circleColor(Color.parseColor("#D93B1E")),
                             PropertyFactory.circleRadius(6f),
