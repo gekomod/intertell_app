@@ -1,6 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.compose")
 }
 
 // CI passes this as the GitHub Actions run number (matches the "build-N" release
@@ -80,10 +81,9 @@ android {
         compose = true
         buildConfig = true
     }
-
-    composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
-    }
+    // No composeOptions.kotlinCompilerExtensionVersion — the Kotlin 2.0+
+    // Compose Compiler Gradle plugin (applied above) replaces it; setting
+    // both is an error.
 
     packaging {
         resources {
