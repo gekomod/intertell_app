@@ -21,6 +21,7 @@ import pl.intertell.technik.data.CustomerSearchResult
 import pl.intertell.technik.data.InfrastructureMap
 import pl.intertell.technik.data.Job
 import pl.intertell.technik.data.LayerStyle
+import pl.intertell.technik.data.computeLayerUnits
 import pl.intertell.technik.data.TeamMember
 import pl.intertell.technik.data.TechnicianRepository
 import pl.intertell.technik.data.api.ApiTechnicianRepository
@@ -194,12 +195,18 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
             try {
                 val map = repository.getInfrastructureGeoJson()
                 _infrastructureGeoJson.value = map
-                _visibleInfrastructureLayers.value = map.layers.toSet()
                 _infrastructureError.value = null
                 // Best-effort — a missing/unparseable .qgs on the server
                 // just means generated colors instead of QGIS's own, not a
                 // reason to fail the whole map.
-                _infrastructureStyles.value = runCatching { repository.getInfrastructureStyle() }.getOrDefault(emptyMap())
+                val styles = runCatching { repository.getInfrastructureStyle() }.getOrDefault(emptyMap())
+                _infrastructureStyles.value = styles
+                // The visible set is keyed per menu row (a whole table, or
+                // one category within a categorized table — see
+                // computeLayerUnits) — computed only now that styles are
+                // known, so a categorized table starts with every one of
+                // its categories checked, not the table as a single unit.
+                _visibleInfrastructureLayers.value = computeLayerUnits(map.layers, styles).map { it.key }.toSet()
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {

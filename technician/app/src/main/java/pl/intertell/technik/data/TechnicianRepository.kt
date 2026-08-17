@@ -50,4 +50,29 @@ data class InfrastructureMap(val file: File, val layers: List<String>)
 /** [default]/[categories] values are "#rrggbb" hex strings. */
 data class LayerStyle(val default: String?, val field: String?, val categories: Map<String, String>)
 
+/**
+ * One independently toggleable/colorable item in the QGIS map's layers
+ * menu — either a whole GeoPackage table ([categoryValue] null, for a table
+ * with no recognized categorization) or a single category within a table
+ * that has one (e.g. one cable-capacity value within "Linie kablowe"),
+ * mirroring how QGIS/QField's own legend breaks a categorized layer down
+ * into one row per category rather than one row for the whole layer.
+ */
+data class LayerUnit(val key: String, val table: String, val categoryValue: String?)
+
+private const val UNIT_KEY_SEPARATOR = "||"
+
+/** Every table/category combination the layers menu and map should offer, in a stable order. */
+fun computeLayerUnits(layers: List<String>, styles: Map<String, LayerStyle>): List<LayerUnit> =
+    layers.flatMap { table ->
+        val style = styles[table]
+        if (style?.field != null && style.categories.isNotEmpty()) {
+            style.categories.keys.sorted().map { value ->
+                LayerUnit(key = table + UNIT_KEY_SEPARATOR + value, table = table, categoryValue = value)
+            }
+        } else {
+            listOf(LayerUnit(key = table, table = table, categoryValue = null))
+        }
+    }
+
 class ApiException(message: String, val httpStatus: Int = 0) : Exception(message)
