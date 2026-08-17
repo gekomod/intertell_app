@@ -97,8 +97,13 @@ class ApiTechnicianRepository(context: Context) : TechnicianRepository {
         api.delete("/api/tech/technicians/$id")
     }
 
+    // Longer timeout than the default 15s — a cold-cache fetch downloads a
+    // file over WebDAV and parses it server-side (see server's
+    // internal/qfield), which can genuinely take longer than a normal JSON
+    // endpoint. Once cached server-side (10 min TTL), later calls return
+    // quickly well within this window regardless.
     override suspend fun getInfrastructureGeoJson(): String =
-        api.get("/api/tech/infrastruktura").toString()
+        api.get("/api/tech/infrastruktura", readTimeoutSeconds = 60).toString()
 }
 
 private fun JSONObject.toTeamMember() = TeamMember(

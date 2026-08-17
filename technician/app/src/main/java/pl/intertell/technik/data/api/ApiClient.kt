@@ -34,10 +34,10 @@ class ApiClient(context: Context) {
 
     val serverConfig: ServerConfig get() = config
 
-    suspend fun get(path: String): JSONObject = execute("GET", path, null)
-    suspend fun post(path: String, body: JSONObject? = null): JSONObject = execute("POST", path, body)
-    suspend fun put(path: String, body: JSONObject): JSONObject = execute("PUT", path, body)
-    suspend fun delete(path: String): JSONObject = execute("DELETE", path, null)
+    suspend fun get(path: String, readTimeoutSeconds: Long = 15): JSONObject = execute("GET", path, null, readTimeoutSeconds)
+    suspend fun post(path: String, body: JSONObject? = null): JSONObject = execute("POST", path, body, 15)
+    suspend fun put(path: String, body: JSONObject): JSONObject = execute("PUT", path, body, 15)
+    suspend fun delete(path: String): JSONObject = execute("DELETE", path, null, 15)
 
     // Every failure mode below — bad network, wrong base URL, a route that
     // doesn't exist yet on an outdated server (plain-text 404, not JSON),
@@ -47,7 +47,7 @@ class ApiClient(context: Context) {
     // a viewModelScope coroutine crashes the whole app, which is exactly
     // what used to happen logging in against a server still running the
     // old API.
-    private suspend fun execute(method: String, path: String, body: JSONObject?): JSONObject =
+    private suspend fun execute(method: String, path: String, body: JSONObject?, readTimeoutSeconds: Long): JSONObject =
         withContext(Dispatchers.IO) {
             try {
                 val baseUrl = config.getBaseUrl()
@@ -67,7 +67,13 @@ class ApiClient(context: Context) {
                 }
                 requestBuilder.method(method, requestBody)
 
-                val response = http.newCall(requestBuilder.build()).execute()
+                // Per-call override — e.g. the QField infrastructure map's
+                // first (cold-cache) fetch downloads a file over WebDAV and
+                // parses it server-side, which can easily exceed the default
+                // 15s and previously surfaced as a false "Brak połączenia z
+                // serwerem" even though the server was still working.
+                val client = if (readTimeoutSeconds == 15L) http else http.newBuilder().readTimeout(readTimeoutSeconds, TimeUnit.SECONDS).build()
+                val response = client.newCall(requestBuilder.build()).execute()
                 response.use {
                     val text = it.body?.string().orEmpty()
                     if (!it.isSuccessful) {
