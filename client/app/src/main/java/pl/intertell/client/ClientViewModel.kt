@@ -122,7 +122,10 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
         _plans.value = emptyList()
         _dmz.value = null
         _chatMessages.value = emptyList()
-        _uiState.update { ClientUiState(serverUrl = it.serverUrl) }
+        // Explicit LOGIN, not the ClientUiState() default (SPLASH) — the
+        // splash→login timer in init{} only ever fires once at app startup,
+        // so resetting to its default screen left logout stuck on Splash.
+        _uiState.update { ClientUiState(serverUrl = it.serverUrl, screen = ClientScreen.LOGIN) }
     }
 
     fun goHome() = navigate(ClientScreen.HOME).also { loadHome() }
