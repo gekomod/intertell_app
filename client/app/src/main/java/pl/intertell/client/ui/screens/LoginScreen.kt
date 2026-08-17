@@ -1,7 +1,6 @@
 package pl.intertell.client.ui.screens
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -36,8 +35,6 @@ import pl.intertell.client.ui.theme.IntertellType
 fun LoginScreen(viewModel: ClientViewModel, state: ClientUiState) {
     var contractOrEmail by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
-    var editingServer by remember { mutableStateOf(false) }
-    var serverDraft by remember(state.serverUrl) { mutableStateOf(state.serverUrl) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
@@ -117,38 +114,6 @@ fun LoginScreen(viewModel: ClientViewModel, state: ClientUiState) {
                     horizontalArrangement = Arrangement.Center,
                 ) {
                     CircularProgressIndicator(modifier = Modifier.width(18.dp), color = IntertellColors.Accent, strokeWidth = 2.dp)
-                }
-            }
-
-            if (!editingServer) {
-                Text(
-                    "Serwer: ${state.serverUrl} · Zmień",
-                    style = IntertellType.monoFootnote,
-                    color = IntertellColors.Text42,
-                    modifier = Modifier
-                        .padding(top = 22.dp)
-                        .clickable { editingServer = true },
-                )
-            } else {
-                Column(modifier = Modifier.padding(top = 18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    LabeledTextField(label = "Adres serwera", value = serverDraft, onValueChange = { serverDraft = it })
-                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Text(
-                            "Zapisz",
-                            style = IntertellType.bodyBold,
-                            color = IntertellColors.Accent,
-                            modifier = Modifier.clickable {
-                                viewModel.setServerUrl(serverDraft)
-                                editingServer = false
-                            },
-                        )
-                        Text(
-                            "Anuluj",
-                            style = IntertellType.bodyBold,
-                            color = IntertellColors.Text55,
-                            modifier = Modifier.clickable { editingServer = false },
-                        )
-                    }
                 }
             }
 
