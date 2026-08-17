@@ -23,6 +23,7 @@ import pl.intertell.client.ui.components.FullScreenOutcome
 import pl.intertell.client.ui.components.ScrimOverlay
 import pl.intertell.client.ui.components.UpdateDialog
 import pl.intertell.client.ui.components.UpdateProgressDialog
+import pl.intertell.client.ui.screens.ChatScreen
 import pl.intertell.client.ui.screens.ContactScreen
 import pl.intertell.client.ui.screens.ContractsScreen
 import pl.intertell.client.ui.screens.DmzScreen
@@ -92,6 +93,7 @@ fun IntertellApp(viewModel: ClientViewModel) {
                         ClientScreen.SETTINGS -> SettingsScreen(viewModel, state)
                         ClientScreen.DMZ -> DmzScreen(viewModel, state)
                         ClientScreen.CONTACT -> ContactScreen(viewModel, state)
+                        ClientScreen.CHAT -> ChatScreen(viewModel, state)
                     }
                 }
             }

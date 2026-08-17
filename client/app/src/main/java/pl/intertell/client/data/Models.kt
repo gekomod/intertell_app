@@ -48,3 +48,9 @@ data class DmzSettings(
     val hostIp: String,
     val publicIp: String,
 )
+
+/** One turn of the "Czat z BOK" AI assistant conversation — role is "user" or "assistant". */
+data class ChatMessage(
+    val role: String,
+    val content: String,
+)

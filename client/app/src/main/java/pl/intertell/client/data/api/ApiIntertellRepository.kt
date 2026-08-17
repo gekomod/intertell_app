@@ -2,8 +2,10 @@ package pl.intertell.client.data.api
 
 import android.content.Context
 import java.util.Locale
+import org.json.JSONArray
 import org.json.JSONObject
 import pl.intertell.client.data.Account
+import pl.intertell.client.data.ChatMessage
 import pl.intertell.client.data.DmzSettings
 import pl.intertell.client.data.IntertellRepository
 import pl.intertell.client.data.Invoice
@@ -81,6 +83,16 @@ class ApiIntertellRepository(context: Context) : IntertellRepository {
             "/api/client/tickets",
             JSONObject().put("subject", subject).put("message", message).put("phone", phone),
         )
+    }
+
+    override suspend fun sendChatMessage(history: List<ChatMessage>, message: String): String {
+        val historyJSON = JSONArray()
+        history.forEach { historyJSON.put(JSONObject().put("role", it.role).put("content", it.content)) }
+        val response = api.post(
+            "/api/client/chat",
+            JSONObject().put("history", historyJSON).put("message", message),
+        )
+        return response.getString("reply")
     }
 }
 

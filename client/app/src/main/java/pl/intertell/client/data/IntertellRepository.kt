@@ -38,6 +38,14 @@ interface IntertellRepository {
      * technician app's own task list with address and map.
      */
     suspend fun reportProblem(subject: String, message: String, phone: String)
+
+    /**
+     * Sends [message] to the "Czat z BOK" AI assistant along with prior
+     * [history] for context, and returns its reply. The assistant can check
+     * connection/signal status but cannot change account state or restart
+     * hardware — see the server's internal/ai package.
+     */
+    suspend fun sendChatMessage(history: List<ChatMessage>, message: String): String
 }
 
 class ApiException(message: String, val httpStatus: Int = 0) : Exception(message)

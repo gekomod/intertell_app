@@ -23,7 +23,7 @@ import pl.intertell.client.ClientViewModel
 import pl.intertell.client.ui.theme.IntertellColors
 import pl.intertell.client.ui.theme.IntertellType
 
-private val settingsGroup = setOf(ClientScreen.SETTINGS, ClientScreen.CONTRACTS, ClientScreen.DMZ, ClientScreen.CONTACT)
+private val settingsGroup = setOf(ClientScreen.SETTINGS, ClientScreen.CONTRACTS, ClientScreen.DMZ, ClientScreen.CONTACT, ClientScreen.CHAT)
 private val invoiceGroup = setOf(ClientScreen.INVOICES, ClientScreen.INVOICE)
 
 @Composable

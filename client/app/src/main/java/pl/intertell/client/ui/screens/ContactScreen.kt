@@ -100,7 +100,7 @@ fun ContactScreen(viewModel: ClientViewModel, state: ClientUiState) {
                 modifier = Modifier.weight(1f),
                 height = 50,
             )
-            OutlineButton("Czat z BOK", onClick = {}, modifier = Modifier.weight(1f), height = 50)
+            OutlineButton("Czat z BOK", onClick = viewModel::goChat, modifier = Modifier.weight(1f), height = 50)
         }
 
         Column(

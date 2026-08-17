@@ -1,6 +1,6 @@
 package pl.intertell.client
 
-enum class ClientScreen { SPLASH, LOGIN, HOME, INVOICES, INVOICE, CONTRACTS, PLAN, SETTINGS, DMZ, CONTACT }
+enum class ClientScreen { SPLASH, LOGIN, HOME, INVOICES, INVOICE, CONTRACTS, PLAN, SETTINGS, DMZ, CONTACT, CHAT }
 
 data class ClientUiState(
     val screen: ClientScreen = ClientScreen.SPLASH,
@@ -19,6 +19,7 @@ data class ClientUiState(
     val resetSheetOpen: Boolean = false,
     val resetInProgress: Boolean = false,
     val ticketSent: Boolean = false,
+    val chatSending: Boolean = false,
     // Local-only display preferences — there's no backend model for these yet.
     val eFakturaOnly: Boolean = true,
     val pushNotifications: Boolean = true,

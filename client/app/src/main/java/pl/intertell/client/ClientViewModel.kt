@@ -11,6 +11,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import pl.intertell.client.data.Account
+import pl.intertell.client.data.ChatMessage
 import pl.intertell.client.data.DmzSettings
 import pl.intertell.client.data.IntertellRepository
 import pl.intertell.client.data.Invoice
@@ -53,6 +54,9 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _downloadProgress = MutableStateFlow<DownloadProgress?>(null)
     val downloadProgress: StateFlow<DownloadProgress?> = _downloadProgress.asStateFlow()
+
+    private val _chatMessages = MutableStateFlow<List<ChatMessage>>(emptyList())
+    val chatMessages: StateFlow<List<ChatMessage>> = _chatMessages.asStateFlow()
 
     init {
         viewModelScope.launch {
@@ -117,6 +121,7 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
         _invoices.value = emptyList()
         _plans.value = emptyList()
         _dmz.value = null
+        _chatMessages.value = emptyList()
         _uiState.update { ClientUiState(serverUrl = it.serverUrl) }
     }
 
@@ -127,6 +132,7 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
     fun goContracts() = navigate(ClientScreen.CONTRACTS)
     fun goDmz() = navigate(ClientScreen.DMZ).also { loadDmz() }
     fun goContact() = navigate(ClientScreen.CONTACT)
+    fun goChat() = navigate(ClientScreen.CHAT)
 
     private fun navigate(screen: ClientScreen) = _uiState.update { it.copy(screen = screen) }
 
@@ -288,6 +294,24 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun closeTicketSent() = _uiState.update { it.copy(ticketSent = false) }
+
+    fun sendChatMessage(text: String) {
+        if (text.isBlank() || _uiState.value.chatSending) return
+        val history = _chatMessages.value
+        _chatMessages.value = history + ChatMessage("user", text)
+        _uiState.update { it.copy(chatSending = true, errorMessage = null) }
+        viewModelScope.launch {
+            try {
+                val reply = repository.sendChatMessage(history, text)
+                _chatMessages.value = _chatMessages.value + ChatMessage("assistant", reply)
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _chatMessages.value = _chatMessages.value + ChatMessage("assistant", e.message ?: "Czat AI jest chwilowo niedostępny.")
+            }
+            _uiState.update { it.copy(chatSending = false) }
+        }
+    }
 
     fun clearError() = _uiState.update { it.copy(errorMessage = null) }
 }
