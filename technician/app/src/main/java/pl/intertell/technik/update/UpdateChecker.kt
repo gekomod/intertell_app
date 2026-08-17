@@ -44,7 +44,11 @@ object UpdateChecker {
                         break
                     }
                 }
-                downloadUrl?.let { UpdateInfo(versionLabel = tag, downloadUrl = it) }
+                // "1.0.$latestBuild" matches defaultConfig.versionName in
+                // build.gradle.kts — shown to the user instead of the raw
+                // GitHub release tag ("build-32"), which is an implementation
+                // detail of the CI/release pipeline, not a version number.
+                downloadUrl?.let { UpdateInfo(versionLabel = "1.0.$latestBuild", downloadUrl = it) }
             }
         } catch (e: Exception) {
             null
