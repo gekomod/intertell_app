@@ -22,6 +22,9 @@ interface TechnicianRepository {
     suspend fun addTechnician(name: String, email: String, phone: String, specialization: String, password: String): TeamMember
     suspend fun updateTechnician(id: Long, name: String, phone: String, specialization: String, active: Boolean): TeamMember
     suspend fun deleteTechnician(id: Long)
+
+    /** Raw GeoJSON FeatureCollection text (fiber runs, cabinets, distribution points) — see server's internal/qfield. */
+    suspend fun getInfrastructureGeoJson(): String
 }
 
 class ApiException(message: String, val httpStatus: Int = 0) : Exception(message)

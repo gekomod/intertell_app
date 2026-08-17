@@ -96,6 +96,9 @@ class ApiTechnicianRepository(context: Context) : TechnicianRepository {
     override suspend fun deleteTechnician(id: Long) {
         api.delete("/api/tech/technicians/$id")
     }
+
+    override suspend fun getInfrastructureGeoJson(): String =
+        api.get("/api/tech/infrastruktura").toString()
 }
 
 private fun JSONObject.toTeamMember() = TeamMember(

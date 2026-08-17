@@ -75,6 +75,15 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
     private val _downloadProgress = MutableStateFlow<DownloadProgress?>(null)
     val downloadProgress: StateFlow<DownloadProgress?> = _downloadProgress.asStateFlow()
 
+    private val _infrastructureGeoJson = MutableStateFlow<String?>(null)
+    val infrastructureGeoJson: StateFlow<String?> = _infrastructureGeoJson.asStateFlow()
+
+    private val _infrastructureLoading = MutableStateFlow(false)
+    val infrastructureLoading: StateFlow<Boolean> = _infrastructureLoading.asStateFlow()
+
+    private val _infrastructureError = MutableStateFlow<String?>(null)
+    val infrastructureError: StateFlow<String?> = _infrastructureError.asStateFlow()
+
     private var searchJob: CoroutineJob? = null
 
     init {
@@ -151,6 +160,8 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
         _team.value = emptyList()
         _selectedJob.value = null
         _selectedCustomer.value = null
+        _infrastructureGeoJson.value = null
+        _infrastructureError.value = null
         _uiState.update { TechnicianUiState(serverUrl = it.serverUrl) }
     }
 
@@ -163,7 +174,23 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
     fun goRouter() = navigate(TechScreen.ROUTER).also { loadFullCustomerDetail() }
     fun goCust() = navigate(TechScreen.CUST)
     fun goJob() = navigate(TechScreen.JOB)
-    fun goQgis() = navigate(TechScreen.QGIS)
+    fun goQgis() = navigate(TechScreen.QGIS).also { loadInfrastructure() }
+
+    private fun loadInfrastructure() {
+        if (_infrastructureGeoJson.value != null) return // loaded once per session — the network map doesn't change minute to minute
+        viewModelScope.launch {
+            _infrastructureLoading.value = true
+            try {
+                _infrastructureGeoJson.value = repository.getInfrastructureGeoJson()
+                _infrastructureError.value = null
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _infrastructureError.value = e.message
+            }
+            _infrastructureLoading.value = false
+        }
+    }
 
     fun geocodeAddress(address: String) {
         if (address.isBlank() || _geocodeCache.value.containsKey(address)) return

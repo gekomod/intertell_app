@@ -3,29 +3,64 @@ package pl.intertell.technik.ui.screens
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.net.Uri
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import org.maplibre.android.camera.CameraUpdateFactory
+import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.maps.MapView
+import org.maplibre.android.maps.Style
+import org.maplibre.android.style.expressions.Expression
+import org.maplibre.android.style.layers.CircleLayer
+import org.maplibre.android.style.layers.LineLayer
+import org.maplibre.android.style.layers.PropertyFactory
+import org.maplibre.android.style.sources.GeoJsonSource
+import pl.intertell.technik.BuildConfig
 import pl.intertell.technik.TechnicianViewModel
-import pl.intertell.technik.ui.components.SolidButton
 import pl.intertell.technik.ui.theme.IntertellColors
 import pl.intertell.technik.ui.theme.IntertellType
 
 private const val QFIELD_PACKAGE = "ch.opengis.qfield"
+private const val INFRASTRUCTURE_SOURCE_ID = "infrastructure"
+
+// Roughly the middle of Poland — a reasonable default before the technician
+// pans to their own area; there's no server-computed bounding box to fit to
+// (see server's internal/qfield), so this is a fixed starting view, not
+// centered on the actual data.
+private val POLAND_CENTER = LatLng(52.06, 19.48)
+private const val POLAND_ZOOM = 6.0
 
 @Composable
-fun QgisScreen(@Suppress("UNUSED_PARAMETER") viewModel: TechnicianViewModel) {
+fun QgisScreen(viewModel: TechnicianViewModel) {
     val context = LocalContext.current
+    val geoJson by viewModel.infrastructureGeoJson.collectAsState()
+    val loading by viewModel.infrastructureLoading.collectAsState()
+    val error by viewModel.infrastructureError.collectAsState()
 
     Column(
         modifier = Modifier
@@ -40,30 +75,101 @@ fun QgisScreen(@Suppress("UNUSED_PARAMETER") viewModel: TechnicianViewModel) {
             modifier = Modifier.padding(top = 6.dp),
         )
 
-        Column(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 20.dp)
+                .weight(1f)
+                .padding(top = 16.dp)
                 .clip(RoundedCornerShape(18.dp))
-                .background(IntertellColors.Navy)
-                .padding(20.dp),
+                .background(IntertellColors.ScreenBackground),
+            contentAlignment = Alignment.Center,
         ) {
-            Text(
-                "Projekt sieci otwiera się w aplikacji QField.",
-                style = IntertellType.bodyBold,
-                color = IntertellColors.White,
-            )
-            Text(
-                "Zaloguj się tam swoim kontem QFieldCloud, aby zobaczyć aktualną infrastrukturę.",
-                style = IntertellType.bodySmall,
-                color = IntertellColors.White.copy(alpha = 0.6f),
-                modifier = Modifier.padding(top = 6.dp),
-            )
-            SolidButton(
-                "Otwórz QField",
-                onClick = { openQField(context) },
-                modifier = Modifier.padding(top = 16.dp),
-            )
+            when {
+                geoJson != null -> InfrastructureMap(geoJson = geoJson!!, modifier = Modifier.fillMaxSize())
+                loading -> CircularProgressIndicator(color = IntertellColors.Accent)
+                error != null -> Column(modifier = Modifier.padding(24.dp)) {
+                    Text(
+                        "Mapa sieci jest niedostępna.",
+                        style = IntertellType.bodyBold,
+                        color = IntertellColors.TextPrimary,
+                    )
+                    Text(
+                        error ?: "",
+                        style = IntertellType.bodySmall,
+                        color = IntertellColors.Text45,
+                        modifier = Modifier.padding(top = 6.dp),
+                    )
+                }
+                else -> CircularProgressIndicator(color = IntertellColors.Accent)
+            }
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 14.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .clickable { openQField(context) }
+                .padding(vertical = 10.dp),
+            horizontalArrangement = Arrangement.Center,
+        ) {
+            Text("Otwórz w aplikacji QField →", style = IntertellType.bodyBold, color = IntertellColors.Accent)
+        }
+    }
+}
+
+@Composable
+private fun InfrastructureMap(geoJson: String, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val mapView = remember {
+        MapView(context).apply { onCreate(null) }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            when (event) {
+                Lifecycle.Event.ON_START -> mapView.onStart()
+                Lifecycle.Event.ON_RESUME -> mapView.onResume()
+                Lifecycle.Event.ON_PAUSE -> mapView.onPause()
+                Lifecycle.Event.ON_STOP -> mapView.onStop()
+                Lifecycle.Event.ON_DESTROY -> mapView.onDestroy()
+                else -> Unit
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            mapView.onDestroy()
+        }
+    }
+
+    AndroidView(factory = { mapView }, modifier = modifier) { view ->
+        view.getMapAsync { map ->
+            map.moveCamera(CameraUpdateFactory.newLatLngZoom(POLAND_CENTER, POLAND_ZOOM))
+            val styleUrl = "https://api.maptiler.com/maps/streets-v2/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
+            map.setStyle(Style.Builder().fromUri(styleUrl)) { style ->
+                if (style.getSource(INFRASTRUCTURE_SOURCE_ID) != null) return@setStyle
+                style.addSource(GeoJsonSource(INFRASTRUCTURE_SOURCE_ID, geoJson))
+                style.addLayer(
+                    LineLayer("infrastructure-lines", INFRASTRUCTURE_SOURCE_ID)
+                        .withFilter(Expression.eq(Expression.geometryType(), "LineString"))
+                        .withProperties(
+                            PropertyFactory.lineColor(Color.parseColor("#0E86C4")),
+                            PropertyFactory.lineWidth(3f),
+                        ),
+                )
+                style.addLayer(
+                    CircleLayer("infrastructure-points", INFRASTRUCTURE_SOURCE_ID)
+                        .withFilter(Expression.eq(Expression.geometryType(), "Point"))
+                        .withProperties(
+                            PropertyFactory.circleColor(Color.parseColor("#D93B1E")),
+                            PropertyFactory.circleRadius(6f),
+                            PropertyFactory.circleStrokeColor(Color.WHITE),
+                            PropertyFactory.circleStrokeWidth(2f),
+                        ),
+                )
+            }
         }
     }
 }
