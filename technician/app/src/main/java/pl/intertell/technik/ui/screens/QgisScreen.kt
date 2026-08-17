@@ -1,9 +1,12 @@
 package pl.intertell.technik.ui.screens
 
+import android.Manifest
 import android.content.ActivityNotFoundException
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.graphics.Color
+import android.location.LocationManager
 import android.net.Uri
 import java.io.File
 import androidx.compose.foundation.background
@@ -29,11 +32,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import org.maplibre.android.camera.CameraUpdateFactory
 import org.maplibre.android.geometry.LatLng
+import org.maplibre.android.location.LocationComponentActivationOptions
+import org.maplibre.android.location.modes.CameraMode
+import org.maplibre.android.location.modes.RenderMode
 import org.maplibre.android.maps.MapView
 import org.maplibre.android.maps.Style
 import org.maplibre.android.style.expressions.Expression
@@ -151,10 +158,13 @@ private fun InfrastructureMap(geoJsonFile: File, modifier: Modifier = Modifier) 
             val styleUrl = "https://api.maptiler.com/maps/streets-v2/style.json?key=${BuildConfig.MAPTILER_API_KEY}"
             map.setStyle(Style.Builder().fromUri(styleUrl)) { style ->
                 if (style.getSource(INFRASTRUCTURE_SOURCE_ID) != null) return@setStyle
-                // File-URI constructor — MapLibre parses the GeoJSON off the
-                // downloaded file itself, so it's never materialized as a
-                // Java String on the way in (see ApiClient.getToFile).
-                style.addSource(GeoJsonSource(INFRASTRUCTURE_SOURCE_ID, geoJsonFile.toURI()))
+                // The file:// URI constructor silently loaded nothing on
+                // real devices (MapLibre's native file source appears not
+                // to handle it reliably) — reading the text ourselves and
+                // using the String constructor is the same approach the
+                // pre-OOM-fix code used, and is safe now that the backend
+                // trims the payload to a couple MB (see internal/qfield).
+                style.addSource(GeoJsonSource(INFRASTRUCTURE_SOURCE_ID, geoJsonFile.readText()))
                 style.addLayer(
                     LineLayer("infrastructure-lines", INFRASTRUCTURE_SOURCE_ID)
                         // GeoPackage exports from QGIS are almost always
@@ -188,8 +198,39 @@ private fun InfrastructureMap(geoJsonFile: File, modifier: Modifier = Modifier) 
                             PropertyFactory.circleStrokeWidth(2f),
                         ),
                 )
+
+                // Permission was already requested at app startup
+                // (MainActivity.askForLocationPermission) — this just skips
+                // the indicator if it was denied, same as elsewhere in the
+                // app.
+                if (hasLocationPermission(context)) {
+                    map.locationComponent.apply {
+                        activateLocationComponent(LocationComponentActivationOptions.builder(context, style).build())
+                        isLocationComponentEnabled = true
+                        renderMode = RenderMode.COMPASS
+                        cameraMode = CameraMode.NONE
+                    }
+                    lastKnownLocation(context)?.let { location ->
+                        map.moveCamera(CameraUpdateFactory.newLatLngZoom(LatLng(location.latitude, location.longitude), 14.0))
+                    }
+                }
             }
         }
+    }
+}
+
+private fun hasLocationPermission(context: Context): Boolean =
+    ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED
+
+private fun lastKnownLocation(context: Context): android.location.Location? {
+    val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as? LocationManager ?: return null
+    return try {
+        locationManager.getProviders(true)
+            .mapNotNull { locationManager.getLastKnownLocation(it) }
+            .maxByOrNull { it.time }
+    } catch (e: SecurityException) {
+        null
     }
 }
 
