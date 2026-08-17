@@ -54,3 +54,16 @@ data class ChatMessage(
     val role: String,
     val content: String,
 )
+
+/**
+ * Outcome of a plan-change request. [limited] is true when the monthly
+ * self-service limit (once/30 days) has already been used — [applied] is
+ * then always false and [message] explains the request was filed for BOK
+ * to verify instead. For a normal downgrade (not limited), [message] is
+ * null and the screen falls back to its own copy.
+ */
+data class PlanChangeResult(
+    val applied: Boolean,
+    val limited: Boolean,
+    val message: String?,
+)

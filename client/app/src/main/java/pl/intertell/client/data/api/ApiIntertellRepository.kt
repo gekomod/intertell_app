@@ -10,6 +10,7 @@ import pl.intertell.client.data.DmzSettings
 import pl.intertell.client.data.IntertellRepository
 import pl.intertell.client.data.Invoice
 import pl.intertell.client.data.Plan
+import pl.intertell.client.data.PlanChangeResult
 import pl.intertell.client.data.PlanDirection
 import pl.intertell.client.data.ServiceStatus
 
@@ -75,8 +76,14 @@ class ApiIntertellRepository(context: Context) : IntertellRepository {
         return plans.map { it.toPlan(currentPriceCents) }
     }
 
-    override suspend fun changePlan(planId: Long): Boolean =
-        api.post("/api/client/plan", JSONObject().put("plan_id", planId)).optBoolean("applied")
+    override suspend fun changePlan(planId: Long): PlanChangeResult {
+        val response = api.post("/api/client/plan", JSONObject().put("plan_id", planId))
+        return PlanChangeResult(
+            applied = response.optBoolean("applied"),
+            limited = response.optBoolean("limited"),
+            message = response.optString("message").ifBlank { null },
+        )
+    }
 
     override suspend fun reportProblem(subject: String, message: String, phone: String) {
         api.post(

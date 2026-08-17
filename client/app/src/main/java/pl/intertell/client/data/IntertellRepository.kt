@@ -23,13 +23,14 @@ interface IntertellRepository {
     suspend fun getPlans(): List<Plan>
 
     /**
-     * Requests a plan change. An upgrade is applied immediately server-side
-     * (returns true); a downgrade instead files a request for BOK to action
-     * at the next billing period (returns false) — matches the Pakiet
-     * screen's own copy about upgrades applying at once vs. downgrades
-     * needing a wniosek.
+     * Requests a plan change. Self-service changes are limited to once
+     * every 30 days server-side — outside that window an upgrade is
+     * applied immediately ([PlanChangeResult.applied] true), a downgrade
+     * files a request for BOK to action at the next billing period; within
+     * the window ANY change is filed for BOK regardless of direction (see
+     * [PlanChangeResult.limited]).
      */
-    suspend fun changePlan(planId: Long): Boolean
+    suspend fun changePlan(planId: Long): PlanChangeResult
 
     /**
      * Reports a problem straight into the technician-assignable queue (the

@@ -16,6 +16,8 @@ data class ClientUiState(
     val sheetPlanId: Long? = null,
     val planChangeDone: Boolean = false,
     val planChangeApplied: Boolean = false,
+    val planChangeLimited: Boolean = false,
+    val planChangeMessage: String? = null,
     val resetSheetOpen: Boolean = false,
     val resetInProgress: Boolean = false,
     val ticketSent: Boolean = false,

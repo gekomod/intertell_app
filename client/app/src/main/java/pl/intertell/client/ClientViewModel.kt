@@ -240,14 +240,21 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             _uiState.update { it.copy(actionInFlight = true, errorMessage = null) }
             try {
-                val applied = repository.changePlan(planId)
+                val result = repository.changePlan(planId)
                 _plans.value = repository.getPlans()
-                if (applied) {
+                if (result.applied) {
                     val (acc, status) = repository.getAccountAndStatus()
                     _account.value = acc
                     _serviceStatus.value = status
                 }
-                _uiState.update { it.copy(planChangeDone = true, planChangeApplied = applied) }
+                _uiState.update {
+                    it.copy(
+                        planChangeDone = true,
+                        planChangeApplied = result.applied,
+                        planChangeLimited = result.limited,
+                        planChangeMessage = result.message,
+                    )
+                }
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -258,7 +265,10 @@ class ClientViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun closeDone() = _uiState.update {
-        it.copy(planChangeDone = false, planChangeApplied = false, sheetPlanId = null, screen = ClientScreen.PLAN)
+        it.copy(
+            planChangeDone = false, planChangeApplied = false, planChangeLimited = false, planChangeMessage = null,
+            sheetPlanId = null, screen = ClientScreen.PLAN,
+        )
     }
 
     fun currentPlanSheet(): Plan? = _uiState.value.sheetPlanId?.let { id -> _plans.value.firstOrNull { it.id == id } }

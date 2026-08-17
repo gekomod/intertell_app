@@ -115,10 +115,11 @@ fun PlanChangeDoneOverlay(viewModel: ClientViewModel, state: ClientUiState) {
     val requiresRequest = !state.planChangeApplied
     FullScreenOutcome(
         title = if (requiresRequest) "Wniosek przyjęty" else "Pakiet zmieniony",
-        body = if (requiresRequest) {
-            "Numer wniosku W-2026/1187. Status znajdziesz w zakładce Pakiet, potwierdzenie wyślemy e-mailem."
-        } else {
-            "Nowa prędkość jest już aktywna. Faktura zostanie skorygowana proporcjonalnie."
+        body = when {
+            state.planChangeLimited -> state.planChangeMessage
+                ?: "Zmianę pakietu z aplikacji można wykonać raz w miesiącu. Ten wniosek trafił do BOK — zmiana zostanie dokonana po weryfikacji zgłoszenia."
+            requiresRequest -> "Numer wniosku W-2026/1187. Status znajdziesz w zakładce Pakiet, potwierdzenie wyślemy e-mailem."
+            else -> "Nowa prędkość jest już aktywna. Faktura zostanie skorygowana proporcjonalnie."
         },
         ctaText = "Wróć do pakietu",
         onCta = viewModel::closeDone,
