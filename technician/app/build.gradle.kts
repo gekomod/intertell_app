@@ -43,11 +43,27 @@ android {
             keyAlias = "androiddebugkey"
             keyPassword = "android"
         }
+        // Release ("upload key" for Google Play) — never checked into git.
+        // Only configured when the four -Prelease* properties are passed on
+        // the command line (see README.md's "Publikacja w Google Play"), so
+        // a plain `gradle assembleDebug`/CI build is unaffected by its
+        // absence.
+        if (project.hasProperty("releaseStoreFile")) {
+            create("release") {
+                storeFile = file(project.property("releaseStoreFile") as String)
+                storePassword = project.property("releaseStorePassword") as String
+                keyAlias = project.property("releaseKeyAlias") as String
+                keyPassword = project.property("releaseKeyPassword") as String
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = false
+            if (project.hasProperty("releaseStoreFile")) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
 

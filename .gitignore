@@ -8,3 +8,9 @@
 .externalNativeBuild
 .cxx
 local.properties
+
+# Google Play upload keys — never commit these (repo is public). The
+# checked-in debug.keystore is fine, it only signs debug builds.
+*-release.keystore
+*.jks
+CREDENTIALS-README.txt
