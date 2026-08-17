@@ -325,10 +325,10 @@ private fun applyLayerFilters(style: Style, layers: List<String>, visibleLayers:
     }
     val visibleExpr = Expression.literal(visibleLayers.toTypedArray())
     (style.getLayer(LINE_LAYER_ID) as? LineLayer)?.setFilter(
-        Expression.all(lineTypeFilter, Expression.in(Expression.get("layer"), visibleExpr)),
+        Expression.all(lineTypeFilter, Expression.`in`(Expression.get("layer"), visibleExpr)),
     )
     (style.getLayer(POINT_LAYER_ID) as? CircleLayer)?.setFilter(
-        Expression.all(pointTypeFilter, Expression.in(Expression.get("layer"), visibleExpr)),
+        Expression.all(pointTypeFilter, Expression.`in`(Expression.get("layer"), visibleExpr)),
     )
 }
 
