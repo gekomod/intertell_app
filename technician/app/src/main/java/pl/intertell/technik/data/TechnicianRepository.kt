@@ -48,6 +48,17 @@ interface TechnicianRepository {
 
     /** Throws [ApiException] (400/401) if currentPassword doesn't match or newPassword is too short. */
     suspend fun changePassword(currentPassword: String, newPassword: String)
+
+    /**
+     * Flips one router-level operational/security setting — [field] is one
+     * of "wifi", "ipv6", "firewall", "wps". Returns the router's full,
+     * updated state so the caller can replace it wholesale rather than
+     * guessing which field changed.
+     */
+    suspend fun toggleRouterSetting(customerId: Long, field: String): RouterInfo
+
+    /** [mode] is "dhcp" or "static". */
+    suspend fun setRouterIPv4Mode(customerId: Long, mode: String): RouterInfo
 }
 
 data class InfrastructureMap(val file: File, val layers: List<String>)

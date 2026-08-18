@@ -157,7 +157,27 @@ class ApiTechnicianRepository(context: Context) : TechnicianRepository {
             JSONObject().put("current_password", currentPassword).put("new_password", newPassword),
         )
     }
+
+    override suspend fun toggleRouterSetting(customerId: Long, field: String): RouterInfo {
+        val response = api.post("/api/tech/customers/$customerId/router/toggle", JSONObject().put("field", field))
+        return response.getJSONObject("router").toRouterInfo()
+    }
+
+    override suspend fun setRouterIPv4Mode(customerId: Long, mode: String): RouterInfo {
+        val response = api.post("/api/tech/customers/$customerId/router/ipv4-mode", JSONObject().put("mode", mode))
+        return response.getJSONObject("router").toRouterInfo()
+    }
 }
+
+private fun JSONObject.toRouterInfo() = RouterInfo(
+    firmware = optString("firmware"), uptimeDays = optInt("uptime_days"),
+    deviceCount = optInt("device_count"), wanIp = optString("wan_ip"),
+    dmzOn = optBoolean("dmz_on"), dmzHost = optString("dmz_host"),
+    proxyOn = optBoolean("proxy_on"), proxyHost = optString("proxy_host"), proxyPort = optString("proxy_port"),
+    vpnClientOn = optBoolean("vpn_client_on"), vpnServerOn = optBoolean("vpn_server_on"),
+    wifiOn = optBoolean("wifi_on", true), ipv6On = optBoolean("ipv6_on", true),
+    ipv4Mode = optString("ipv4_mode", "dhcp"), firewallOn = optBoolean("firewall_on", true), wpsOn = optBoolean("wps_on"),
+)
 
 private fun JSONObject.toTeamMember() = TeamMember(
     id = getLong("id"), code = optString("code"), name = optString("name"), email = optString("email"),
@@ -215,15 +235,7 @@ private fun JSONObject.toCustomer(): Customer {
             connectionUp = it.optBoolean("connection_up"), lastSeenOnline = it.optString("last_seen_online"),
         )
     }
-    val router = optJSONObject("router")?.let {
-        RouterInfo(
-            firmware = it.optString("firmware"), uptimeDays = it.optInt("uptime_days"),
-            deviceCount = it.optInt("device_count"), wanIp = it.optString("wan_ip"),
-            dmzOn = it.optBoolean("dmz_on"), dmzHost = it.optString("dmz_host"),
-            proxyOn = it.optBoolean("proxy_on"), proxyHost = it.optString("proxy_host"), proxyPort = it.optString("proxy_port"),
-            vpnClientOn = it.optBoolean("vpn_client_on"), vpnServerOn = it.optBoolean("vpn_server_on"),
-        )
-    }
+    val router = optJSONObject("router")?.toRouterInfo()
     val history = optJSONArrayOrEmpty("history").map { it.toServiceHistoryEntry() }
     return Customer(
         id = getLong("id"), customerNo = optString("customer_no"), name = optString("name"),

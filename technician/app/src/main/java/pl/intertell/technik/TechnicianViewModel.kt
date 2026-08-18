@@ -484,6 +484,40 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    /** [field] is one of "wifi", "ipv6", "firewall", "wps" — see RouterScreen. */
+    fun toggleRouterSetting(field: String) {
+        val customer = _selectedCustomer.value ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(actionInFlight = true) }
+            try {
+                val router = repository.toggleRouterSetting(customer.id, field)
+                _selectedCustomer.update { it?.copy(router = router) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.update { it.copy(errorMessage = e.message) }
+            }
+            _uiState.update { it.copy(actionInFlight = false) }
+        }
+    }
+
+    /** [mode] is "dhcp" or "static". */
+    fun setRouterIPv4Mode(mode: String) {
+        val customer = _selectedCustomer.value ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(actionInFlight = true) }
+            try {
+                val router = repository.setRouterIPv4Mode(customer.id, mode)
+                _selectedCustomer.update { it?.copy(router = router) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.update { it.copy(errorMessage = e.message) }
+            }
+            _uiState.update { it.copy(actionInFlight = false) }
+        }
+    }
+
     // --- Team (Zespół) ---
 
     fun refreshTeam() {

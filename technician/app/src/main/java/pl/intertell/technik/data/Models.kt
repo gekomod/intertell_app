@@ -91,6 +91,14 @@ data class RouterInfo(
     val proxyPort: String,
     val vpnClientOn: Boolean,
     val vpnServerOn: Boolean,
+    // Router-level operational/security settings a technician can edit
+    // from RouterScreen — unlike the customer self-service fields above,
+    // which stay read-only in the technician app.
+    val wifiOn: Boolean,
+    val ipv6On: Boolean,
+    val ipv4Mode: String, // "dhcp" | "static"
+    val firewallOn: Boolean,
+    val wpsOn: Boolean,
 )
 
 data class ServiceHistoryEntry(
