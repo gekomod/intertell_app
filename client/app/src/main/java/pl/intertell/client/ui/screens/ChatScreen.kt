@@ -1,5 +1,7 @@
 package pl.intertell.client.ui.screens
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -38,6 +40,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import pl.intertell.client.ClientUiState
@@ -51,6 +54,11 @@ import pl.intertell.client.ui.theme.IntertellColors
 import pl.intertell.client.ui.theme.IntertellType
 
 private val quickReplies = listOf("Sprawdź saldo", "Stan łącza", "Sygnał ONT")
+
+// Matches the raw https://wa.me/... link the assistant's redirect_to_whatsapp
+// tool result contains — used to render it as a tappable action instead of
+// plain, unclickable text in the chat bubble.
+private val whatsAppLinkRegex = Regex("""https://wa\.me/\S+""")
 
 @Composable
 fun ChatScreen(viewModel: ClientViewModel, state: ClientUiState) {
@@ -111,7 +119,7 @@ fun ChatScreen(viewModel: ClientViewModel, state: ClientUiState) {
         ) {
             if (messages.isEmpty()) {
                 item {
-                    ChatBubble(ChatMessage("assistant", "Cześć! Mogę sprawdzić saldo, stan łącza i sygnał ONT — o co chcesz zapytać?"))
+                    ChatBubble(ChatMessage("assistant", "Cześć! Mogę sprawdzić saldo, stan łącza i sygnał ONT, albo połączyć Cię z konsultantem na WhatsApp — o co chcesz zapytać?"))
                 }
             }
             items(messages) { msg -> ChatBubble(msg) }
@@ -185,6 +193,11 @@ private fun QuickReplyChip(text: String, onClick: () -> Unit) {
 @Composable
 private fun ChatBubble(msg: ChatMessage) {
     val isUser = msg.role == "user"
+    val context = LocalContext.current
+    val link = remember(msg.content) { whatsAppLinkRegex.find(msg.content)?.value }
+    val textWithoutLink = remember(msg.content, link) {
+        if (link != null) msg.content.replace(link, "").trim() else msg.content
+    }
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = if (isUser) Arrangement.End else Arrangement.Start,
@@ -194,18 +207,30 @@ private fun ChatBubble(msg: ChatMessage) {
             AssistantAvatar(size = 26)
             Box(modifier = Modifier.width(8.dp))
         }
-        Box(
+        Column(
             modifier = Modifier
                 .widthIn(max = 260.dp)
                 .clip(RoundedCornerShape(14.dp))
                 .background(if (isUser) IntertellColors.Accent else IntertellColors.Surface)
                 .padding(horizontal = 14.dp, vertical = 10.dp),
         ) {
-            Text(
-                msg.content,
-                style = IntertellType.body,
-                color = if (isUser) IntertellColors.White else IntertellColors.TextPrimary,
-            )
+            if (textWithoutLink.isNotEmpty()) {
+                Text(
+                    textWithoutLink,
+                    style = IntertellType.body,
+                    color = if (isUser) IntertellColors.White else IntertellColors.TextPrimary,
+                )
+            }
+            if (link != null) {
+                Text(
+                    "Otwórz WhatsApp →",
+                    style = IntertellType.bodyBold,
+                    color = if (isUser) IntertellColors.White else IntertellColors.Accent,
+                    modifier = Modifier
+                        .padding(top = if (textWithoutLink.isNotEmpty()) 6.dp else 0.dp)
+                        .clickable { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(link))) },
+                )
+            }
         }
     }
 }
