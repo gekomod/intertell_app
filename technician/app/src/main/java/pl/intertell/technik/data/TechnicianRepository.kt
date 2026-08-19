@@ -50,15 +50,22 @@ interface TechnicianRepository {
     suspend fun changePassword(currentPassword: String, newPassword: String)
 
     /**
-     * Flips one router-level operational/security setting — [field] is one
-     * of "wifi", "ipv6", "firewall", "wps". Returns the router's full,
-     * updated state so the caller can replace it wholesale rather than
-     * guessing which field changed.
+     * Flips one boolean router setting — [field] is one of "wifi", "ipv6",
+     * "firewall", "wps", "dmz", "proxy", "vpn_client", "vpn_server" (the
+     * last four are the same preferences the customer can toggle from
+     * Panel Klienta — a technician can edit them too, e.g. while walking a
+     * customer through setup on a call). Returns the router's full, updated
+     * state so the caller can replace it wholesale rather than guessing
+     * which field changed.
      */
     suspend fun toggleRouterSetting(customerId: Long, field: String): RouterInfo
 
     /** [mode] is "dhcp" or "static". */
     suspend fun setRouterIPv4Mode(customerId: Long, mode: String): RouterInfo
+
+    suspend fun setRouterDMZHost(customerId: Long, host: String): RouterInfo
+
+    suspend fun setRouterProxy(customerId: Long, host: String, port: String): RouterInfo
 }
 
 data class InfrastructureMap(val file: File, val layers: List<String>)

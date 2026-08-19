@@ -17,6 +17,9 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -25,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import pl.intertell.technik.TechnicianViewModel
 import pl.intertell.technik.ui.components.BackLink
 import pl.intertell.technik.ui.components.Card
+import pl.intertell.technik.ui.components.LabeledTextField
 import pl.intertell.technik.ui.components.ToggleSwitch
 import pl.intertell.technik.ui.theme.IntertellColors
 import pl.intertell.technik.ui.theme.IntertellType
@@ -140,20 +144,63 @@ fun RouterScreen(viewModel: TechnicianViewModel) {
             }
         }
 
-        Text("Preferencje klienta", style = IntertellType.bodyBold, color = IntertellColors.TextPrimary, modifier = Modifier.padding(top = 22.dp, bottom = 10.dp))
+        Text("Sieć klienta", style = IntertellType.bodyBold, color = IntertellColors.TextPrimary, modifier = Modifier.padding(top = 22.dp, bottom = 10.dp))
         Card {
-            StatusRow("DMZ", if (router.dmzOn) "włączona · ${router.dmzHost}" else "wyłączona", router.dmzOn)
-            StatusRow("Proxy", if (router.proxyOn) "${router.proxyHost}:${router.proxyPort}" else "wyłączone", router.proxyOn, top = 12.dp)
-            StatusRow("VPN klient", if (router.vpnClientOn) "włączony" else "wyłączony", router.vpnClientOn, top = 12.dp)
-            StatusRow("VPN serwer", if (router.vpnServerOn) "włączony" else "wyłączony", router.vpnServerOn, top = 12.dp)
+            ToggleRow("DMZ", router.dmzOn, enabled = !state.actionInFlight, onToggle = { viewModel.toggleRouterSetting("dmz") })
+            if (router.dmzOn) {
+                var dmzHost by remember(router.dmzHost) { mutableStateOf(router.dmzHost) }
+                SaveableField(
+                    label = "Host DMZ",
+                    value = dmzHost,
+                    onValueChange = { dmzHost = it },
+                    enabled = !state.actionInFlight,
+                    onSave = { viewModel.setRouterDMZHost(dmzHost) },
+                )
+            }
+
+            ToggleRow("Proxy", router.proxyOn, enabled = !state.actionInFlight, onToggle = { viewModel.toggleRouterSetting("proxy") }, top = 14.dp)
+            if (router.proxyOn) {
+                var proxyHost by remember(router.proxyHost) { mutableStateOf(router.proxyHost) }
+                var proxyPort by remember(router.proxyPort) { mutableStateOf(router.proxyPort) }
+                Row(modifier = Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    LabeledTextField("Host proxy", proxyHost, { proxyHost = it }, modifier = Modifier.weight(2f))
+                    LabeledTextField("Port", proxyPort, { proxyPort = it }, modifier = Modifier.weight(1f))
+                }
+                SaveChip(enabled = !state.actionInFlight, onSave = { viewModel.setRouterProxy(proxyHost, proxyPort) })
+            }
+
+            ToggleRow("VPN klient", router.vpnClientOn, enabled = !state.actionInFlight, onToggle = { viewModel.toggleRouterSetting("vpn_client") }, top = 14.dp)
+            ToggleRow("VPN serwer", router.vpnServerOn, enabled = !state.actionInFlight, onToggle = { viewModel.toggleRouterSetting("vpn_server") }, top = 14.dp)
         }
 
         Text(
-            "Preferencje klienta (DMZ, proxy, VPN) klient ustawia sam w swoim panelu — tu tylko do odczytu.",
+            "To te same ustawienia, które klient widzi i sam edytuje w swoim panelu — zmiany tutaj zapisują się od razu na jego koncie.",
             style = IntertellType.monoFootnote,
             color = IntertellColors.Text45,
             modifier = Modifier.padding(top = 16.dp),
         )
+    }
+}
+
+@Composable
+private fun SaveableField(label: String, value: String, onValueChange: (String) -> Unit, enabled: Boolean, onSave: () -> Unit) {
+    Column(modifier = Modifier.padding(top = 10.dp)) {
+        LabeledTextField(label, value, onValueChange)
+        SaveChip(enabled = enabled, onSave = onSave)
+    }
+}
+
+@Composable
+private fun SaveChip(enabled: Boolean, onSave: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .padding(top = 8.dp)
+            .clip(RoundedCornerShape(9.dp))
+            .background(IntertellColors.Accent.copy(alpha = if (enabled) 1f else 0.5f))
+            .then(if (enabled) Modifier.clickable(onClick = onSave) else Modifier)
+            .padding(horizontal = 16.dp, vertical = 9.dp),
+    ) {
+        Text("Zapisz", style = IntertellType.bodyBold, color = IntertellColors.White)
     }
 }
 

@@ -518,6 +518,38 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    fun setRouterDMZHost(host: String) {
+        val customer = _selectedCustomer.value ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(actionInFlight = true) }
+            try {
+                val router = repository.setRouterDMZHost(customer.id, host)
+                _selectedCustomer.update { it?.copy(router = router) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.update { it.copy(errorMessage = e.message) }
+            }
+            _uiState.update { it.copy(actionInFlight = false) }
+        }
+    }
+
+    fun setRouterProxy(host: String, port: String) {
+        val customer = _selectedCustomer.value ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(actionInFlight = true) }
+            try {
+                val router = repository.setRouterProxy(customer.id, host, port)
+                _selectedCustomer.update { it?.copy(router = router) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.update { it.copy(errorMessage = e.message) }
+            }
+            _uiState.update { it.copy(actionInFlight = false) }
+        }
+    }
+
     // --- Team (Zespół) ---
 
     fun refreshTeam() {

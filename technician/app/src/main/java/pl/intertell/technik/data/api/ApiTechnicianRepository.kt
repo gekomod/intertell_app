@@ -167,6 +167,19 @@ class ApiTechnicianRepository(context: Context) : TechnicianRepository {
         val response = api.post("/api/tech/customers/$customerId/router/ipv4-mode", JSONObject().put("mode", mode))
         return response.getJSONObject("router").toRouterInfo()
     }
+
+    override suspend fun setRouterDMZHost(customerId: Long, host: String): RouterInfo {
+        val response = api.post("/api/tech/customers/$customerId/router/dmz-host", JSONObject().put("dmz_host", host))
+        return response.getJSONObject("router").toRouterInfo()
+    }
+
+    override suspend fun setRouterProxy(customerId: Long, host: String, port: String): RouterInfo {
+        val response = api.post(
+            "/api/tech/customers/$customerId/router/proxy",
+            JSONObject().put("proxy_host", host).put("proxy_port", port),
+        )
+        return response.getJSONObject("router").toRouterInfo()
+    }
 }
 
 private fun JSONObject.toRouterInfo() = RouterInfo(
