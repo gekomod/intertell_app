@@ -41,11 +41,14 @@ class ApiIntertellRepository(context: Context) : IntertellRepository {
         val plan = customer.optJSONObject("plan")
         val lms = customer.optJSONObject("lms")
         val router = customer.optJSONObject("router")
+        val optical = customer.optJSONObject("optical")
         val status = ServiceStatus(
             planName = plan?.optString("name").orEmpty(),
             speedLabel = plan?.optString("speed").orEmpty(),
             connectionUp = lms?.let { it.optBoolean("connection_up") },
             routerUptimeDays = router?.let { it.optInt("uptime_days") },
+            signalQuality = optical?.optString("quality"),
+            signalRxDbm = optical?.let { it.optDouble("rx_dbm") },
         )
         return account to status
     }

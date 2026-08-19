@@ -8,12 +8,19 @@ data class Account(
     val city: String,
 )
 
-/** connectionUp/routerUptimeDays are null when unknown — not LMS-linked, LMS unreachable, or no router record yet. */
+/**
+ * connectionUp/routerUptimeDays are null when unknown — not LMS-linked, LMS
+ * unreachable, or no router record yet. signalQuality/signalRxDbm are null
+ * for the same reason (no router device on file, or the OLT isn't
+ * configured/reachable) — see the server's handlers/signal.go.
+ */
 data class ServiceStatus(
     val planName: String,
     val speedLabel: String,
     val connectionUp: Boolean?,
     val routerUptimeDays: Int?,
+    val signalQuality: String? = null, // "good" | "ok" | "bad"
+    val signalRxDbm: Double? = null,
 )
 
 data class Invoice(

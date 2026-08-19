@@ -17,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.SignalCellularAlt
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -97,6 +98,17 @@ fun HomeScreen(viewModel: ClientViewModel, state: ClientUiState) {
                     MetricColumn("ŁĄCZE", connectionLabel(s.connectionUp))
                     s.routerUptimeDays?.let { MetricColumn("ROUTER", "$it dni") }
                 }
+                s.signalQuality?.let { quality ->
+                    Row(modifier = Modifier.padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Default.SignalCellularAlt, contentDescription = null, tint = signalColor(quality), modifier = Modifier.size(18.dp))
+                        Text(
+                            signalLabel(quality) + (s.signalRxDbm?.let { " · %.1f dBm".format(it) } ?: ""),
+                            style = IntertellType.bodyBold,
+                            color = signalColor(quality),
+                            modifier = Modifier.padding(start = 8.dp),
+                        )
+                    }
+                }
                 Row(modifier = Modifier.padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     HomeActionPill("Test prędkości", Modifier.weight(1f))
                     HomeActionPill("Zgłoś awarię", Modifier.weight(1f), onClick = viewModel::goContact)
@@ -152,6 +164,20 @@ private fun connectionLabel(connectionUp: Boolean?): String = when (connectionUp
     true -> "aktywne"
     false -> "brak"
     null -> "—"
+}
+
+// Matches the server's handlers/signal.go classification ("good"/"ok"/"bad") —
+// same colors used everywhere else in the app for "fine"/"degraded"/"broken".
+private fun signalColor(quality: String): Color = when (quality) {
+    "good" -> IntertellColors.GreenLightDot
+    "bad" -> IntertellColors.Danger
+    else -> IntertellColors.Amber
+}
+
+private fun signalLabel(quality: String): String = when (quality) {
+    "good" -> "Sygnał bardzo dobry"
+    "bad" -> "Sygnał wymaga uwagi"
+    else -> "Sygnał dobry"
 }
 
 @Composable
