@@ -7,6 +7,7 @@ import org.json.JSONObject
 import pl.intertell.technik.data.Customer
 import pl.intertell.technik.data.CustomerSearchResult
 import pl.intertell.technik.data.Device
+import pl.intertell.technik.data.DeviceMacResult
 import pl.intertell.technik.data.InfrastructureMap
 import pl.intertell.technik.data.Job
 import pl.intertell.technik.data.LayerStyle
