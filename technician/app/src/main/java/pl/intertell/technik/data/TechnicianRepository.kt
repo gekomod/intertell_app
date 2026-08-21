@@ -66,6 +66,14 @@ interface TechnicianRepository {
     suspend fun setRouterDMZHost(customerId: Long, host: String): RouterInfo
 
     suspend fun setRouterProxy(customerId: Long, host: String, port: String): RouterInfo
+
+    /**
+     * Sets a device's MAC address during a hardware swap — the technician
+     * types it in by hand. The server saves it locally and, best-effort,
+     * pushes it to LMS's nodes.mac for the owning customer (see the
+     * result's [DeviceMacResult.lmsSynced]).
+     */
+    suspend fun setDeviceMac(customerId: Long, deviceId: Long, mac: String): DeviceMacResult
 }
 
 data class InfrastructureMap(val file: File, val layers: List<String>)

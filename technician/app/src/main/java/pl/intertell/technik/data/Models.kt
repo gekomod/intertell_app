@@ -68,6 +68,8 @@ data class Device(
     val serial: String,
     val location: String,
     val status: String,
+    /** "" if never set (e.g. a decoder, which has no LMS node of its own). Editable by a technician during a hardware swap — see TechnicianRepository.setDeviceMac. */
+    val mac: String = "",
     /** Live signal from the configured Huawei OLT (see server's internal/onu) — null when unavailable (not the router/ONT device, OLT not configured, SNMP lookup failed, ...). */
     val optical: OpticalInfo? = null,
 )
@@ -126,6 +128,8 @@ data class Customer(
     val router: RouterInfo? = null,
     val history: List<ServiceHistoryEntry> = emptyList(),
 )
+
+data class DeviceMacResult(val device: Device, val lmsSynced: Boolean)
 
 data class LmsOnlyMatch(val lmsCustomerId: Long, val name: String)
 

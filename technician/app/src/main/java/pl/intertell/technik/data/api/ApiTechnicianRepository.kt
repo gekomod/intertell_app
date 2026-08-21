@@ -180,6 +180,17 @@ class ApiTechnicianRepository(context: Context) : TechnicianRepository {
         )
         return response.getJSONObject("router").toRouterInfo()
     }
+
+    override suspend fun setDeviceMac(customerId: Long, deviceId: Long, mac: String): DeviceMacResult {
+        val response = api.post(
+            "/api/tech/customers/$customerId/devices/$deviceId/mac",
+            JSONObject().put("mac", mac),
+        )
+        return DeviceMacResult(
+            device = response.getJSONObject("device").toDevice(),
+            lmsSynced = response.optBoolean("lms_synced"),
+        )
+    }
 }
 
 private fun JSONObject.toRouterInfo() = RouterInfo(
@@ -233,7 +244,7 @@ private fun JSONObject.toLmsOutageJob() = Job(
 private fun JSONObject.toDevice() = Device(
     id = getLong("id"), kind = optString("kind"), kindLabel = optString("kind_label"),
     model = optString("model"), serial = optString("serial"), location = optString("location"),
-    status = optString("status"), optical = optJSONObject("optical")?.toOpticalInfo(),
+    status = optString("status"), mac = optString("mac"), optical = optJSONObject("optical")?.toOpticalInfo(),
 )
 
 private fun JSONObject.toOpticalInfo() = OpticalInfo(

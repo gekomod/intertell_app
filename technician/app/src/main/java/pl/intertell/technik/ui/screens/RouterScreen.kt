@@ -107,6 +107,32 @@ fun RouterScreen(viewModel: TechnicianViewModel) {
             )
         }
 
+        if (routerDevice != null) {
+            Text("Wymiana urządzenia", style = IntertellType.bodyBold, color = IntertellColors.TextPrimary, modifier = Modifier.padding(top = 22.dp, bottom = 10.dp))
+            Card {
+                var mac by remember(routerDevice.id, routerDevice.mac) { mutableStateOf(routerDevice.mac) }
+                SaveableField(
+                    label = "Adres MAC",
+                    value = mac,
+                    onValueChange = { mac = it },
+                    enabled = !state.actionInFlight,
+                    onSave = { viewModel.setDeviceMac(routerDevice.id, mac) },
+                )
+                Text(
+                    "Wpisz nowy adres MAC po wymianie urządzenia (format AA:BB:CC:DD:EE:FF) — zapisze się od razu w LMS.",
+                    style = IntertellType.monoFootnote,
+                    color = IntertellColors.Text45,
+                    modifier = Modifier.padding(top = 8.dp),
+                )
+                state.errorMessage?.let { error ->
+                    Text(error, style = IntertellType.bodySmall, color = IntertellColors.Danger, modifier = Modifier.padding(top = 10.dp))
+                }
+                state.infoMessage?.let { info ->
+                    Text(info, style = IntertellType.bodySmall, color = IntertellColors.Green, modifier = Modifier.padding(top = 10.dp))
+                }
+            }
+        }
+
         val optical = routerDevice?.optical
         if (optical != null) {
             Text("Sygnał optyczny (ONT)", style = IntertellType.bodyBold, color = IntertellColors.TextPrimary, modifier = Modifier.padding(top = 22.dp, bottom = 10.dp))

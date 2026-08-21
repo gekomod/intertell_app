@@ -550,6 +550,36 @@ class TechnicianViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    /**
+     * Saves a device's new MAC address during a hardware swap — see
+     * RouterScreen's device-edit field. Replaces the device in place in the
+     * currently-selected customer's device list so the UI reflects it
+     * immediately, and surfaces whether the change also reached LMS.
+     */
+    fun setDeviceMac(deviceId: Long, mac: String) {
+        val customer = _selectedCustomer.value ?: return
+        viewModelScope.launch {
+            _uiState.update { it.copy(actionInFlight = true) }
+            try {
+                val result = repository.setDeviceMac(customer.id, deviceId, mac)
+                _selectedCustomer.update { current ->
+                    current?.copy(devices = current.devices.map { if (it.id == deviceId) result.device else it })
+                }
+                val info = if (result.lmsSynced) {
+                    "Zapisano adres MAC i zsynchronizowano z LMS."
+                } else {
+                    "Zapisano adres MAC (bez synchronizacji z LMS)."
+                }
+                _uiState.update { it.copy(infoMessage = info) }
+            } catch (e: CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                _uiState.update { it.copy(errorMessage = e.message) }
+            }
+            _uiState.update { it.copy(actionInFlight = false) }
+        }
+    }
+
     // --- Team (Zespół) ---
 
     fun refreshTeam() {
